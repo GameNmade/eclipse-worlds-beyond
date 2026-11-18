@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#08090d">
-<title>ECLIPSE — Worlds Beyond 0.4</title>
+<title>ECLIPSE — Worlds Beyond 0.5</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08090d;color:#eee;font-family:Arial,sans-serif;touch-action:none}
@@ -37,6 +37,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 #dodge{background:#253e4c;border-color:#6995a8}
 #inventoryButton{background:#51401f;border-color:#c9a15b}
 #skillsButton{background:#263d4a;border-color:#6c9eb5}
+#portalButton{background:#285044;border-color:#71c6a4;display:none}
 #skillTree{position:fixed;z-index:16;inset:0;background:#05060bf2;display:none;align-items:center;justify-content:center;padding:14px}
 .skillPanel{width:min(96%,520px);max-height:90%;overflow:auto;background:linear-gradient(145deg,#17232b,#0d0d13);border:1px solid #648da0;border-radius:10px;padding:16px}
 .skillGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
@@ -72,14 +73,13 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 </style>
 </head>
 <body>
-
 <div id="titleScreen">
  <div class="titleContent">
   <h1>ECLIPSE</h1>
   <div class="subtitle">WORLDS BEYOND</div>
   <p class="intro">An unknown world. A dying signal. Something is hunting you in the darkness.<br><br>Survive the frontier. Discover what waits beyond the eclipse.</p>
   <button id="enterButton">ENTER THE FRONTIER</button>
-  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — BOSS AWAKENING 0.4</p>
+  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — DUNGEON GATE 0.5</p>
  </div>
 </div>
 
@@ -108,6 +108,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
  </div>
  <div class="actions">
   <button class="action" id="skillsButton">SKILLS</button>
+  <button class="action" id="portalButton">ENTER PORTAL</button>
   <button class="action" id="inventoryButton">INVENTORY</button>
   <button class="action" id="fire">PLASMA FIRE</button>
   <button class="action" id="nova">NOVA BLAST</button>
@@ -116,15 +117,11 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 </div>
 
 <div id="help">LEFT THUMB: MOVE · RIGHT THUMB: AIM / ROTATE · FIRE · NOVA · DODGE</div>
-
 <div id="bossBar"><div id="bossName">THE ABYSSAL WARDEN</div><div id="bossHealth"><div id="bossFill"></div></div></div>
 <div id="skillTree"><div class="skillPanel"><div class="invHeader"><h2>SKILL TREE</h2><button id="closeSkills">CLOSE ✕</button></div><div class="hudLine"><span>AVAILABLE SKILL POINTS</span><span id="skillPoints">0</span></div><div class="skillGrid" id="skillGrid"></div></div></div>
 <div id="inventory">
  <div class="invPanel">
-  <div class="invHeader">
-   <h2>EXPLORER ARMORY</h2>
-   <button id="closeInventory">CLOSE ✕</button>
-  </div>
+  <div class="invHeader"><h2>EXPLORER ARMORY</h2><button id="closeInventory">CLOSE ✕</button></div>
   <div class="stats">
    <div class="stat">DAMAGE<b id="statDamage">28</b></div>
    <div class="stat">ARMOR<b id="statArmor">0</b></div>
@@ -141,7 +138,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 const $=id=>document.getElementById(id);
-let scene,camera,renderer,player,clock;
+let scene,camera,renderer,player,clock,worldFloor;
 let started=false,health=100,maxHealth=100,level=1,xp=0,shards=0;
 let enemies=[],projectiles=[],crystals=[],effects=[];
 let fireHeld=false,keys={};
@@ -151,13 +148,10 @@ let cameraYaw=0,cameraPitch=.12;
 let joystick={x:0,y:0},stickPointer=null,lookPointer=null,lastLook=null;
 let inventoryOpen=false;
 let equipped={Weapon:null,Helmet:null,Chest:null,Gloves:null,Boots:null,Accessory:null};
-let bag=[];
-let itemId=0;
-let skillPoints=0;
+let bag=[],itemId=0,skillPoints=0;
 let skills={power:0,vitality:0,nova:0,armor:0};
-let boss=null;
+let boss=null,portal=null,dungeon=false,dungeonProps=[],dungeonRewarded=false;
 let novaBoostActive=false;
-let autoTarget=null;
 
 const rarityNames=['common','uncommon','rare','epic','legendary'];
 const rarityColors={common:0xaaaaaa,uncommon:0x55d78a,rare:0x55baff,epic:0xc18aff,legendary:0xffb84d};
@@ -179,8 +173,7 @@ const mats={
  glow:new THREE.MeshBasicMaterial({color:0x65dfff}),
  crystal:new THREE.MeshStandardMaterial({color:0x50d9e9,emissive:0x087b9b,emissiveIntensity:2}),
  enemy:new THREE.MeshStandardMaterial({color:0x29232c,roughness:.7}),
- eye:new THREE.MeshBasicMaterial({color:0xff263d}),
- red:new THREE.MeshBasicMaterial({color:0xff263d})
+ eye:new THREE.MeshBasicMaterial({color:0xff263d})
 };
 
 function showMessage(t,d=1.5){$('message').textContent=t;messageTimer=d}
@@ -200,15 +193,13 @@ function makeWorld(){
  renderer.toneMappingExposure=1.15;
  document.body.appendChild(renderer.domElement);
  clock=new THREE.Clock();
-
  scene.add(new THREE.HemisphereLight(0x78809c,0x171016,1.25));
  const moon=new THREE.DirectionalLight(0xa4b6d5,2.1);
  moon.position.set(-35,55,25);scene.add(moon);
  const redLight=new THREE.PointLight(0x8d182c,65,55);
  redLight.position.set(15,8,-15);scene.add(redLight);
-
- const floor=makeMesh(new THREE.PlaneGeometry(150,150),mats.ground,0,-.35,0);
- floor.rotation.x=-Math.PI/2;
+ worldFloor=makeMesh(new THREE.PlaneGeometry(150,150),mats.ground,0,-.35,0);
+ worldFloor.rotation.x=-Math.PI/2;
  for(let i=0;i<150;i++){
   const x=(Math.random()-.5)*145,z=(Math.random()-.5)*145;
   if(Math.abs(x)<5&&Math.abs(z)<5)continue;
@@ -223,7 +214,6 @@ function makeWorld(){
  starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
  scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xc7d6ed,size:.38})));
 }
-
 function createPlayer(){
  player=new THREE.Group();
  makeMesh(new THREE.CapsuleGeometry(.48,.95,5,8),mats.armor,0,1,0,player);
@@ -234,7 +224,6 @@ function createPlayer(){
  makeMesh(new THREE.BoxGeometry(.52,.7,.3),mats.rock,0,1.25,.34,player);
  player.position.set(0,0,0);scene.add(player);
 }
-
 function createEnemy(x,z){
  const e=new THREE.Group();
  const body=makeMesh(new THREE.IcosahedronGeometry(.7,1),mats.enemy,0,.95,0,e);
@@ -252,7 +241,6 @@ function createEnemy(x,z){
  e.userData={hp:65,maxHp:65,attack:0,speed:1.3+Math.random()*.45};
  scene.add(e);enemies.push(e);
 }
-
 function spawnWave(){
  wave++;
  if(wave%3===0)createBoss();
@@ -262,13 +250,10 @@ function spawnWave(){
  }
  showMessage('WAVE '+wave+' — HOSTILES DETECTED',2.5);
 }
-
 function spawnCrystal(x,z){
  const c=makeMesh(new THREE.OctahedronGeometry(.42),mats.crystal,x,.6,z);
- c.userData={phase:Math.random()*6};
- crystals.push(c);
+ c.userData={phase:Math.random()*6};crystals.push(c);
 }
-
 function createLoot(x,z){
  const roll=Math.random();
  const rarity=roll<.48?0:roll<.75?1:roll<.91?2:roll<.985?3:4;
@@ -276,246 +261,140 @@ function createLoot(x,z){
  const names=type==='Weapon'?weaponNames:armorNames[type];
  const name=names[Math.floor(Math.random()*names.length)];
  const power=rarity+1;
- const item={
-  id:++itemId,type,name,rarity:rarityNames[rarity],
-  power,damage:type==='Weapon'?4+power*5:0,
-  armor:type==='Weapon'?0:1+power*2,
-  x,z
- };
- const color=rarityColors[item.rarity];
- const gem=makeMesh(new THREE.OctahedronGeometry(.36),new THREE.MeshBasicMaterial({color}),x,.65,z);
- gem.userData.item=item;
- crystals.push(gem);
+ const item={id:++itemId,type,name,rarity:rarityNames[rarity],power,damage:type==='Weapon'?4+power*5:0,armor:type==='Weapon'?0:1+power*2,x,z};
+ const gem=makeMesh(new THREE.OctahedronGeometry(.36),new THREE.MeshBasicMaterial({color:rarityColors[item.rarity]}),x,.65,z);
+ gem.userData.item=item;crystals.push(gem);
 }
-
 function recalculateStats(){
  equipmentStats={damage:28,armor:0};
- for(const item of Object.values(equipped)){
-  if(item){equipmentStats.damage+=item.damage;equipmentStats.armor+=item.armor}
- }
+ for(const item of Object.values(equipped))if(item){equipmentStats.damage+=item.damage;equipmentStats.armor+=item.armor}
 }
-
 function collectCrystal(c){
  scene.remove(c);crystals=crystals.filter(a=>a!==c);
- if(c.userData.item){
-  bag.push(c.userData.item);
-  showMessage(c.userData.item.rarity.toUpperCase()+' '+c.userData.item.type+' FOUND!',1.5);
- }else{
-  shards++;showMessage('ENERGY SHARD +1',.7);
- }
+ if(c.userData.item){bag.push(c.userData.item);showMessage(c.userData.item.rarity.toUpperCase()+' '+c.userData.item.type+' FOUND!',1.5)}
+ else{shards++;showMessage('ENERGY SHARD +1',.7)}
 }
-
 function damageEnemyBase(e,amount){
  if(!enemies.includes(e))return;
- e.userData.hp-=amount;
- e.scale.setScalar(1.07);
+ e.userData.hp-=amount;e.scale.setScalar(1.07);
  setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},65);
  if(e.userData.hp<=0){
-  scene.remove(e);enemies=enemies.filter(a=>a!==e);
-  xp+=35;
+  scene.remove(e);enemies=enemies.filter(a=>a!==e);xp+=35;
   if(Math.random()<.75)createLoot(e.position.x,e.position.z);
   if(Math.random()<.65)spawnCrystal(e.position.x+1,e.position.z);
   checkLevel();showMessage('HOSTILE ELIMINATED',.8);
  }
 }
-
 function checkLevel(){
  while(xp>=level*100){
-  xp-=level*100;level++;
-  maxHealth+=10;health=Math.min(maxHealth,health+30);
-  skillPoints++;
+  xp-=level*100;level++;maxHealth+=10;health=Math.min(maxHealth,health+30);skillPoints++;
   showMessage('LEVEL UP — LEVEL '+level+' · SKILL POINT +1',2);
  }
 }
-
-function getAimDirection(){
- return new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)).normalize();
-}
-
+function getAimDirection(){return new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)).normalize()}
 function findTarget(){
- const dir=getAimDirection();
- let best=null,bestScore=Infinity;
+ const dir=getAimDirection();let best=null,bestScore=Infinity;
  for(const e of enemies){
   const to=new THREE.Vector3(e.position.x-player.position.x,0,e.position.z-player.position.z);
-  const dist=to.length();
-  if(dist>28||dist<.1)continue;
-  to.normalize();
-  const dot=dir.dot(to);
-  if(dot>.65){
-   const score=dist+(1-dot)*12;
-   if(score<bestScore){bestScore=score;best=e}
-  }
+  const dist=to.length();if(dist>28||dist<.1)continue;
+  to.normalize();const dot=dir.dot(to);
+  if(dot>.65){const score=dist+(1-dot)*12;if(score<bestScore){bestScore=score;best=e}}
  }
  return best;
 }
-
 function shootBase(){
  if(fireCooldown>0)return;
  fireCooldown=.28;
- const dir=getAimDirection();
- const target=findTarget();
+ const dir=getAimDirection(),target=findTarget();
  if(target){
   const to=new THREE.Vector3(target.position.x-player.position.x,0,target.position.z-player.position.z).normalize();
   if(dir.dot(to)>.78)dir.lerp(to,.28).normalize();
  }
- const orb=makeMesh(new THREE.SphereGeometry(.17,10,10),mats.glow,
-  player.position.x,1.5,player.position.z);
- orb.userData={velocity:dir.multiplyScalar(34),life:1.5,damage:equipmentStats.damage};
- projectiles.push(orb);
+ const orb=makeMesh(new THREE.SphereGeometry(.17,10,10),mats.glow,player.position.x,1.5,player.position.z);
+ orb.userData={velocity:dir.multiplyScalar(34),life:1.5,damage:equipmentStats.damage};projectiles.push(orb);
 }
-
 function novaBase(){
  if(novaCooldown>0){showMessage('NOVA RECHARGING',.7);return}
  novaCooldown=5;
  const ring=makeMesh(new THREE.TorusGeometry(1,.09,8,48),mats.glow,player.position.x,.25,player.position.z);
- ring.rotation.x=Math.PI/2;
- effects.push({mesh:ring,life:.65,max:.65});
- for(const e of [...enemies]){
-  if(e.position.distanceTo(player.position)<9)damageEnemy(e,45+level*2);
- }
+ ring.rotation.x=Math.PI/2;effects.push({mesh:ring,life:.65,max:.65});
+ for(const e of [...enemies])if(e.position.distanceTo(player.position)<9)damageEnemy(e,45+level*2);
  if(boss&&boss.position.distanceTo(player.position)<11)damageEnemy(boss,45+level*2);
  showMessage('NOVA BLAST',1);
 }
-
-function dodge(){
- if(dodgeCooldown>0)return;
- dodgeCooldown=2.2;dodgeTime=.32;
- showMessage('DODGE',.45);
-}
-
+function dodge(){if(dodgeCooldown>0)return;dodgeCooldown=2.2;dodgeTime=.32;showMessage('DODGE',.45)}
 function updatePlayer(dt){
  const inputX=joystick.x+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
  const inputY=joystick.y+(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
- let x=inputX,z=inputY;
- const len=Math.hypot(x,z);
+ let x=inputX,z=inputY;const len=Math.hypot(x,z);
  if(len>.08){
   x/=Math.max(1,len);z/=Math.max(1,len);
   const sin=Math.sin(cameraYaw),cos=Math.cos(cameraYaw);
-  const worldX=x*cos+z*sin;
-  const worldZ=-x*sin+z*cos;
+  const worldX=x*cos+z*sin,worldZ=-x*sin+z*cos;
   const speed=dodgeTime>0?25:7;
-  player.position.x+=worldX*speed*dt;
-  player.position.z+=worldZ*speed*dt;
+  player.position.x+=worldX*speed*dt;player.position.z+=worldZ*speed*dt;
   player.rotation.y=Math.atan2(-worldX,-worldZ);
  }
  player.position.x=THREE.MathUtils.clamp(player.position.x,-70,70);
  player.position.z=THREE.MathUtils.clamp(player.position.z,-70,70);
  if(fireHeld||keys.Space)shoot();
  if(dodgeTime>0)dodgeTime-=dt;
- fireCooldown=Math.max(0,fireCooldown-dt);
- novaCooldown=Math.max(0,novaCooldown-dt);
- dodgeCooldown=Math.max(0,dodgeCooldown-dt);
+ fireCooldown=Math.max(0,fireCooldown-dt);novaCooldown=Math.max(0,novaCooldown-dt);dodgeCooldown=Math.max(0,dodgeCooldown-dt);
 }
-
 function updateEnemiesBase(dt){
  for(const e of [...enemies]){
-  const dx=player.position.x-e.position.x,dz=player.position.z-e.position.z;
-  const dist=Math.hypot(dx,dz);
+  const dx=player.position.x-e.position.x,dz=player.position.z-e.position.z,dist=Math.hypot(dx,dz);
   if(dist>1.55){
-   e.position.x+=dx/dist*e.userData.speed*dt;
-   e.position.z+=dz/dist*e.userData.speed*dt;
-   e.rotation.y=Math.atan2(-dx,-dz);
+   e.position.x+=dx/dist*e.userData.speed*dt;e.position.z+=dz/dist*e.userData.speed*dt;e.rotation.y=Math.atan2(-dx,-dz);
   }else{
    e.userData.attack-=dt;
    if(e.userData.attack<=0&&dodgeTime<=0){
     const reduction=equipmentStats.armor/(equipmentStats.armor+30);
-    const damage=8*(1-reduction)*(1-skills.armor*.08);
-    health=Math.max(0,health-damage);
-    e.userData.attack=1.1;
-    showMessage('YOU ARE UNDER ATTACK',.5);
-    if(health<=0)respawn();
+    health=Math.max(0,health-8*(1-reduction)*(1-skills.armor*.08));
+    e.userData.attack=1.1;showMessage('YOU ARE UNDER ATTACK',.5);if(health<=0)respawn();
    }
   }
  }
 }
-
-function respawn(){
- health=maxHealth;player.position.set(0,0,0);
- showMessage('RECONSTRUCTED — RETURN TO THE FRONTIER',2);
-}
-
-function updateProjectilesBase(dt){
- for(const p of [...projectiles]){
-  p.position.addScaledVector(p.userData.velocity,dt);
-  p.userData.life-=dt;
-  let hit=null;
-  for(const e of enemies){
-   if(p.position.distanceTo(new THREE.Vector3(e.position.x,1,e.position.z))<1){hit=e;break}
-  }
-  if(hit){
-   damageEnemy(hit,p.userData.damage);
-   scene.remove(p);projectiles=projectiles.filter(a=>a!==p);
-  }else if(p.userData.life<=0){
-   scene.remove(p);projectiles=projectiles.filter(a=>a!==p);
-  }
- }
-}
-
+function respawn(){health=maxHealth;player.position.set(0,0,0);showMessage('RECONSTRUCTED — RETURN TO THE FRONTIER',2)}
 function updateCrystals(dt){
  for(const c of [...crystals]){
-  c.rotation.y+=dt*1.8;
-  c.position.y=.6+Math.sin(clock.elapsedTime*2+(c.userData.phase||0))*.15;
+  c.rotation.y+=dt*1.8;c.position.y=.6+Math.sin(clock.elapsedTime*2+(c.userData.phase||0))*.15;
   if(c.position.distanceTo(player.position)<1.4)collectCrystal(c);
  }
 }
-
 function updateEffects(dt){
  for(const fx of [...effects]){
-  fx.life-=dt;
-  const t=1-fx.life/fx.max;
-  fx.mesh.scale.setScalar(1+t*8);
-  fx.mesh.material.opacity=1-t;
-  fx.mesh.material.transparent=true;
+  fx.life-=dt;const t=1-fx.life/fx.max;fx.mesh.scale.setScalar(1+t*8);
+  fx.mesh.material.opacity=1-t;fx.mesh.material.transparent=true;
   if(fx.life<=0){scene.remove(fx.mesh);effects=effects.filter(a=>a!==fx)}
  }
 }
-
 function updateCamera(dt){
  const horizontal=9*Math.cos(cameraPitch);
- const offset=new THREE.Vector3(
-  Math.sin(cameraYaw)*horizontal,
-  3.5+Math.sin(cameraPitch)*9,
-  Math.cos(cameraYaw)*horizontal
- );
+ const offset=new THREE.Vector3(Math.sin(cameraYaw)*horizontal,3.5+Math.sin(cameraPitch)*9,Math.cos(cameraYaw)*horizontal);
  const desired=player.position.clone().add(offset);
- camera.position.lerp(desired,1-Math.pow(.001,dt));
- camera.lookAt(player.position.x,1.35,player.position.z);
+ camera.position.lerp(desired,1-Math.pow(.001,dt));camera.lookAt(player.position.x,1.35,player.position.z);
 }
-
 function updateHUDBase(){
  $('healthText').textContent=Math.ceil(health)+' / '+maxHealth;
  $('healthFill').style.width=(health/maxHealth*100)+'%';
  $('levelText').textContent='LEVEL '+level;
  $('xpText').textContent=xp+' / '+level*100+' XP';
  $('xpFill').style.width=(xp/(level*100)*100)+'%';
- $('shardText').textContent=shards;
- $('enemyText').textContent=enemies.length;
+ $('shardText').textContent=shards;$('enemyText').textContent=enemies.length;
  $('armorText').textContent=equipmentStats.armor;
  $('nova').textContent=novaCooldown>0?'NOVA '+novaCooldown.toFixed(1)+'s':'NOVA BLAST';
  $('dodge').textContent=dodgeCooldown>0?'DODGE '+dodgeCooldown.toFixed(1)+'s':'DODGE';
 }
-
-function itemDescription(item){
- return item.name+' · '+item.rarity.toUpperCase()+' · '+(item.damage?'+'+item.damage+' damage':'+'+item.armor+' armor');
-}
-
+function itemDescription(item){return item.name+' · '+item.rarity.toUpperCase()+' · '+(item.damage?'+'+item.damage+' damage':'+'+item.armor+' armor')}
 function renderInventory(){
- recalculateStats();
- $('statDamage').textContent=equipmentStats.damage;
- $('statArmor').textContent=equipmentStats.armor;
- $('statLevel').textContent=level;
- const slots=$('gearSlots');
- slots.innerHTML='';
+ recalculateStats();$('statDamage').textContent=equipmentStats.damage;$('statArmor').textContent=equipmentStats.armor;$('statLevel').textContent=level;
+ const slots=$('gearSlots');slots.innerHTML='';
  for(const type of gearTypes){
-  const item=equipped[type];
-  const el=document.createElement('div');
-  el.className='slot';
+  const item=equipped[type],el=document.createElement('div');el.className='slot';
   el.innerHTML='<small>'+type.toUpperCase()+'</small><span class="'+(item?item.rarity:'common')+'">'+(item?item.name:'Empty')+'</span>';
-  if(item){
-   const b=document.createElement('button');b.textContent='REMOVE';
-   b.onclick=()=>{bag.push(item);equipped[type]=null;renderInventory()};
-   el.appendChild(b);
-  }
+  if(item){const b=document.createElement('button');b.textContent='REMOVE';b.onclick=()=>{bag.push(item);equipped[type]=null;renderInventory()};el.appendChild(b)}
   slots.appendChild(el);
  }
  const bagEl=$('bag');bagEl.innerHTML='';
@@ -526,123 +405,61 @@ function renderInventory(){
   const desc=document.createElement('div');desc.style.color='#aaa';desc.style.marginTop='6px';desc.textContent=itemDescription(item);
   const b=document.createElement('button');b.textContent='EQUIP';
   b.onclick=()=>{
-   const old=equipped[item.type];
-   equipped[item.type]=item;
-   bag=bag.filter(a=>a.id!==item.id);
-   if(old)bag.push(old);
-   recalculateStats();renderInventory();showMessage(item.name+' EQUIPPED',1);
+   const old=equipped[item.type];equipped[item.type]=item;bag=bag.filter(a=>a.id!==item.id);
+   if(old)bag.push(old);recalculateStats();renderInventory();showMessage(item.name+' EQUIPPED',1);
   };
   el.append(name,b,desc);bagEl.appendChild(el);
  }
 }
-
-function openInventory(){
- inventoryOpen=true;$('inventory').style.display='flex';
- fireHeld=false;renderInventory();
-}
-function closeInventory(){
- inventoryOpen=false;$('inventory').style.display='none';
-}
-
+function openInventory(){inventoryOpen=true;$('inventory').style.display='flex';fireHeld=false;renderInventory()}
+function closeInventory(){inventoryOpen=false;$('inventory').style.display='none'}
 function bindHold(id,callback){
  const el=$(id);
  el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);callback(true)});
  const stop=e=>{e.preventDefault();callback(false)};
- el.addEventListener('pointerup',stop);
- el.addEventListener('pointercancel',stop);
- el.addEventListener('lostpointercapture',()=>callback(false));
+ el.addEventListener('pointerup',stop);el.addEventListener('pointercancel',stop);el.addEventListener('lostpointercapture',()=>callback(false));
 }
-
 function setupJoystick(){
  const area=$('stickArea'),knob=$('stick');
  function update(e){
-  const r=area.getBoundingClientRect();
-  let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  const r=area.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
   const max=r.width*.34,len=Math.hypot(dx,dy);
   if(len>max){dx=dx/len*max;dy=dy/len*max}
-  joystick.x=dx/max;joystick.y=dy/max;
-  knob.style.transform=`translate(${dx}px,${dy}px)`;
+  joystick.x=dx/max;joystick.y=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`;
  }
- area.addEventListener('pointerdown',e=>{
-  e.preventDefault();stickPointer=e.pointerId;area.setPointerCapture(e.pointerId);update(e);
- });
+ area.addEventListener('pointerdown',e=>{e.preventDefault();stickPointer=e.pointerId;area.setPointerCapture(e.pointerId);update(e)});
  area.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)update(e)});
- function release(e){
-  if(e.pointerId!==stickPointer)return;
-  stickPointer=null;joystick.x=0;joystick.y=0;knob.style.transform='translate(0,0)';
- }
- area.addEventListener('pointerup',release);
- area.addEventListener('pointercancel',release);
+ function release(e){if(e.pointerId!==stickPointer)return;stickPointer=null;joystick.x=0;joystick.y=0;knob.style.transform='translate(0,0)'}
+ area.addEventListener('pointerup',release);area.addEventListener('pointercancel',release);
 }
-
 function setupCameraTouch(){
  renderer.domElement.addEventListener('pointerdown',e=>{
-  if(e.pointerType==='mouse'||inventoryOpen)return;
-  if(e.clientX<innerWidth*.43)return;
-  lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};
-  renderer.domElement.setPointerCapture(e.pointerId);
+  if(e.pointerType==='mouse'||inventoryOpen||e.clientX<innerWidth*.43)return;
+  lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);
  });
  renderer.domElement.addEventListener('pointermove',e=>{
   if(e.pointerId!==lookPointer||!lastLook)return;
   const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;
-  cameraYaw-=dx*.008;
-  cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.004,-.25,.65);
+  cameraYaw-=dx*.008;cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.004,-.25,.65);
   lastLook={x:e.clientX,y:e.clientY};
  });
  function end(e){if(e.pointerId===lookPointer){lookPointer=null;lastLook=null}}
- renderer.domElement.addEventListener('pointerup',end);
- renderer.domElement.addEventListener('pointercancel',end);
+ renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);
 }
-
 function setupControls(){
- setupJoystick();
- setupCameraTouch();
- bindHold('fire',on=>fireHeld=on);
+ setupJoystick();setupCameraTouch();bindHold('fire',on=>fireHeld=on);
  $('nova').addEventListener('pointerdown',e=>{e.preventDefault();nova()});
  $('dodge').addEventListener('pointerdown',e=>{e.preventDefault();dodge()});
  $('inventoryButton').addEventListener('pointerdown',e=>{e.preventDefault();openInventory()});
  $('closeInventory').addEventListener('click',closeInventory);
  window.addEventListener('keydown',e=>{
-  keys[e.code]=true;
-  if(e.code==='KeyQ')nova();
-  if(e.code==='ShiftLeft'||e.code==='ShiftRight')dodge();
-  if(e.code==='KeyI')openInventory();
-  if(e.code==='Space')e.preventDefault();
+  keys[e.code]=true;if(e.code==='KeyQ')nova();if(e.code==='ShiftLeft'||e.code==='ShiftRight')dodge();
+  if(e.code==='KeyI')openInventory();if(e.code==='Space')e.preventDefault();
  });
  window.addEventListener('keyup',e=>keys[e.code]=false);
 }
 
-function animate(){
- if(!started)return;
- requestAnimationFrame(animate);
- if(inventoryOpen){renderer.render(scene,camera);return}
- const dt=Math.min(clock.getDelta(),.04);
- updatePlayer(dt);updateEnemies(dt);updateProjectiles(dt);
- updateCrystals(dt);updateEffects(dt);updateCamera(dt);updateHUD();
- if(enemies.length===0&&!boss)spawnWave();
- if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0)$('message').textContent=''}
- renderer.render(scene,camera);
-}
-
-function startGame(){
- if(started)return;
- started=true;
- $('titleScreen').style.display='none';
- $('hud').style.display='block';$('controls').style.display='flex';
- $('crosshair').style.display='block';$('help').style.display='block';
- $('lookHint').style.display='block';
- makeWorld();createPlayer();setupControls();
- for(let i=0;i<5;i++){
-  const a=Math.PI*2*i/5;
-  createEnemy(Math.cos(a)*18,Math.sin(a)*18);
- }
- for(let i=0;i<12;i++)spawnCrystal((Math.random()-.5)*65,(Math.random()-.5)*65);
- cameraYaw=0;cameraPitch=.12;
- camera.position.set(0,5,9);camera.lookAt(0,1,0);
- animate();
-}
-
-/* ECLIPSE 0.4 — BOSS + SKILL TREE */
+/* BOSS + SKILL TREE */
 function createBoss(){
  if(boss&&boss.parent)return;
  const g=new THREE.Group();
@@ -667,7 +484,8 @@ function damageEnemy(e,amount){
    const x=e.position.x,z=e.position.z;scene.remove(e);boss=null;$('bossBar').style.display='none';
    xp+=300;shards+=12;skillPoints+=2;checkLevel();
    createLoot(x,z);createLoot(x+2,z+1);
-   showMessage('WARDEN SLAIN — REWARDS + 2 SKILL POINTS',4);
+   createPortal(x+4,z+3,'ENTER THE ABYSSAL DUNGEON');
+   showMessage('WARDEN SLAIN — A DUNGEON GATE HAS OPENED',4);
   }
   return;
  }
@@ -729,6 +547,65 @@ function updateProjectiles(dt){
   if(p.userData.life<=0){scene.remove(p);projectiles=projectiles.filter(a=>a!==p)}
  }
 }
+
+/* DUNGEON PORTALS */
+function createPortal(x,z,label){
+ if(portal)scene.remove(portal.mesh);
+ const gate=new THREE.Group();
+ const frameMat=new THREE.MeshStandardMaterial({color:0x245c57,metalness:.65,roughness:.25,emissive:0x087e70,emissiveIntensity:1.5});
+ const coreMat=new THREE.MeshBasicMaterial({color:0x56f0d0,transparent:true,opacity:.72,side:THREE.DoubleSide});
+ makeMesh(new THREE.TorusGeometry(2.1,.2,12,48),frameMat,0,2.2,0,gate);
+ makeMesh(new THREE.CircleGeometry(1.85,40),coreMat,0,2.2,0,gate);
+ for(const side of [-1,1]){
+  const pillar=makeMesh(new THREE.CylinderGeometry(.22,.34,4.6,8),frameMat,side*2.15,2.2,0,gate);
+  pillar.rotation.z=side*-.08;
+  makeMesh(new THREE.OctahedronGeometry(.32),mats.glow,side*2.15,4.65,0,gate);
+ }
+ gate.position.set(x,0,z);scene.add(gate);portal={mesh:gate,label};
+ $('portalButton').textContent=dungeon?'RETURN TO FRONTIER':'ENTER DUNGEON';
+}
+function clearDungeonProps(){for(const p of dungeonProps)scene.remove(p);dungeonProps=[]}
+function buildDungeon(){
+ clearDungeonProps();
+ const stone=new THREE.MeshStandardMaterial({color:0x171e2a,metalness:.35,roughness:.8});
+ const rune=new THREE.MeshBasicMaterial({color:0x27d6c7});
+ for(let i=0;i<12;i++){
+  const a=i*Math.PI/6,r=17;
+  const pillar=makeMesh(new THREE.BoxGeometry(2.2,7,2.2),stone,Math.cos(a)*r,3.15,Math.sin(a)*r);
+  pillar.rotation.y=a;dungeonProps.push(pillar);
+  const sigil=makeMesh(new THREE.BoxGeometry(2.35,.12,2.35),rune,Math.cos(a)*r,6.75,Math.sin(a)*r);
+  sigil.rotation.y=a;dungeonProps.push(sigil);
+ }
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4;
+  const crystal=makeMesh(new THREE.OctahedronGeometry(.8),new THREE.MeshBasicMaterial({color:0x21b9bd}),Math.cos(a)*11,1.2,Math.sin(a)*11);
+  crystal.userData.dungeonGlow=true;dungeonProps.push(crystal);
+ }
+}
+function usePortal(){
+ if(!portal||!portal.mesh.parent)return;
+ if(portal.mesh.position.distanceTo(player.position)>8){showMessage('MOVE CLOSER TO THE PORTAL',1);return}
+ if(!dungeon){
+  dungeon=true;dungeonRewarded=false;
+  scene.background=new THREE.Color(0x071b20);scene.fog=new THREE.FogExp2(0x092329,.022);
+  worldFloor.material=new THREE.MeshStandardMaterial({color:0x14272b,roughness:.95});
+  buildDungeon();scene.remove(portal.mesh);portal=null;player.position.set(0,0,0);
+  createPortal(0,-6,'RETURN TO FRONTIER');
+  for(let i=0;i<7;i++){
+   const a=Math.PI*2*i/7,d=13+Math.random()*8;
+   createEnemy(Math.cos(a)*d,Math.sin(a)*d);
+   const e=enemies[enemies.length-1];e.userData.hp=95;e.userData.maxHp=95;e.userData.speed*=1.25;e.scale.setScalar(1.12);
+  }
+  showMessage('THE ABYSSAL DUNGEON — SURVIVE THE DEPTHS',3);
+ }else{
+  dungeon=false;
+  scene.background=new THREE.Color(0x090a10);scene.fog=new THREE.FogExp2(0x101016,.014);
+  worldFloor.material=mats.ground;clearDungeonProps();scene.remove(portal.mesh);portal=null;player.position.set(0,0,0);
+  for(const e of [...enemies]){scene.remove(e);enemies=enemies.filter(a=>a!==e)}
+  for(let i=0;i<5;i++){const a=Math.PI*2*i/5;createEnemy(Math.cos(a)*18,Math.sin(a)*18)}
+  showMessage('BACK TO THE FRONTIER',2);
+ }
+}
 function updateHUD(){
  updateHUDBase();$('enemyText').textContent=enemies.length+(boss?' + BOSS':'');
  $('skillPointHud').textContent=skillPoints;
@@ -751,13 +628,46 @@ function openSkills(){inventoryOpen=true;fireHeld=false;$('skillTree').style.dis
 function closeSkills(){inventoryOpen=false;$('skillTree').style.display='none'}
 $('skillsButton').addEventListener('pointerdown',e=>{e.preventDefault();openSkills()});
 $('closeSkills').addEventListener('click',closeSkills);
+$('portalButton').addEventListener('click',usePortal);
 
+function animate(){
+ if(!started)return;
+ requestAnimationFrame(animate);
+ if(inventoryOpen){renderer.render(scene,camera);return}
+ const dt=Math.min(clock.getDelta(),.04);
+ updatePlayer(dt);updateEnemies(dt);updateProjectiles(dt);
+ updateCrystals(dt);updateEffects(dt);updateCamera(dt);updateHUD();
+ if(portal&&portal.mesh.parent){
+  portal.mesh.rotation.y=Math.sin(clock.elapsedTime*.8)*.08;
+  for(const child of portal.mesh.children)if(child.geometry&&child.geometry.type==='CircleGeometry')child.material.opacity=.55+Math.sin(clock.elapsedTime*2)*.2;
+  $('portalButton').style.display=portal.mesh.position.distanceTo(player.position)<8?'block':'none';
+ }else $('portalButton').style.display='none';
+ for(const p of dungeonProps)if(p.userData.dungeonGlow)p.rotation.y+=dt*.8;
+ if(dungeon&&enemies.length===0&&!dungeonRewarded){
+  dungeonRewarded=true;xp+=200;shards+=8;skillPoints++;checkLevel();
+  createLoot(player.position.x+2,player.position.z);
+  showMessage('DUNGEON CLEARED — BONUS LOOT + 1 SKILL POINT',4);
+ }
+ if(enemies.length===0&&!boss&&!portal&&!dungeon)spawnWave();
+ if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0)$('message').textContent=''}
+ renderer.render(scene,camera);
+}
+function startGame(){
+ if(started)return;
+ started=true;$('titleScreen').style.display='none';
+ $('hud').style.display='block';$('controls').style.display='flex';
+ $('crosshair').style.display='block';$('help').style.display='block';$('lookHint').style.display='block';
+ makeWorld();createPlayer();setupControls();
+ for(let i=0;i<5;i++){const a=Math.PI*2*i/5;createEnemy(Math.cos(a)*18,Math.sin(a)*18)}
+ for(let i=0;i<12;i++)spawnCrystal((Math.random()-.5)*65,(Math.random()-.5)*65);
+ cameraYaw=0;cameraPitch=.12;camera.position.set(0,5,9);camera.lookAt(0,1,0);
+ animate();
+}
 $('enterButton').addEventListener('click',startGame);
 window.addEventListener('resize',()=>{
  if(!renderer||!camera)return;
  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
- renderer.setSize(innerWidth,innerHeight);
- renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+ renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
 });
 </script>
 </body>
