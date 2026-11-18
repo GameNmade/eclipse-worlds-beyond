@@ -2213,6 +2213,200 @@ openInventory = function() {
 
 console.log('ECLIPSE 0.11 — MOBILE HUD REDESIGN LOADED');
 
+/* =========================================
+   ECLIPSE 0.12 — DIABLO COMBAT INTERFACE
+   ========================================= */
+
+const diabloStyle12 = document.createElement('style');
+
+diabloStyle12.textContent = `
+/* Floating action cluster */
+#controls {
+  bottom:58px !important;
+  padding:0 9px !important;
+  align-items:flex-end !important;
+  justify-content:space-between !important;
+}
+
+#stickArea {
+  width:108px !important;
+  height:108px !important;
+  flex-shrink:0;
+  border:2px solid #9b7950 !important;
+  background:radial-gradient(circle,#28201bdb,#09090bd9) !important;
+  box-shadow:0 0 15px #000b,inset 0 0 12px #a477382b;
+}
+
+#stick {
+  width:50px !important;
+  height:50px !important;
+  left:27px !important;
+  top:27px !important;
+  background:radial-gradient(circle,#bd8b50,#54301f) !important;
+  border:2px solid #e3bd7c !important;
+  box-shadow:0 0 12px #d69a4c88;
+}
+
+.actions {
+  display:grid !important;
+  grid-template-columns:60px 72px 60px !important;
+  grid-template-rows:60px 60px !important;
+  gap:5px !important;
+  width:auto !important;
+  align-items:center !important;
+  justify-items:center !important;
+}
+
+.action {
+  width:58px !important;
+  height:58px !important;
+  min-width:0 !important;
+  padding:3px !important;
+  border-radius:50% !important;
+  border:2px solid #a17b53 !important;
+  background:radial-gradient(circle at 35% 25%,#514033,#171115 75%) !important;
+  box-shadow:0 3px 8px #000c,inset 0 0 9px #c59a5533 !important;
+  color:#f1dfc4 !important;
+  font-size:9px !important;
+  font-weight:bold !important;
+  letter-spacing:0 !important;
+  text-align:center !important;
+  touch-action:none;
+  transition:transform .08s,filter .08s;
+}
+
+.action:active {
+  transform:scale(.91);
+  filter:brightness(1.5);
+}
+
+/* Primary attack */
+#fire {
+  grid-column:2 !important;
+  grid-row:2 !important;
+  width:70px !important;
+  height:70px !important;
+  border:3px solid #e1a05b !important;
+  background:radial-gradient(circle at 35% 25%,#b54c30,#40131a 75%) !important;
+  box-shadow:0 0 17px #d64c3655,inset 0 0 12px #ffb26b66 !important;
+  font-size:10px !important;
+}
+
+/* Upper ability row */
+#nova {
+  grid-column:1 !important;
+  grid-row:1 !important;
+  border-color:#a68bd4 !important;
+  background:radial-gradient(circle at 35% 25%,#70529c,#21152f 75%) !important;
+  box-shadow:0 0 12px #9260d455 !important;
+}
+
+#dodge {
+  grid-column:3 !important;
+  grid-row:1 !important;
+  border-color:#75b5c4 !important;
+  background:radial-gradient(circle at 35% 25%,#376b7a,#14232e 75%) !important;
+  box-shadow:0 0 12px #56b6d455 !important;
+}
+
+/* Utility row */
+#skillsButton {
+  grid-column:1 !important;
+  grid-row:2 !important;
+  border-color:#78a5b5 !important;
+}
+
+#inventoryButton {
+  grid-column:3 !important;
+  grid-row:2 !important;
+  border-color:#d4ad68 !important;
+  background:radial-gradient(circle at 35% 25%,#80602c,#30200e 75%) !important;
+}
+
+#portalButton {
+  grid-column:2 !important;
+  grid-row:1 !important;
+  border-color:#71d6b0 !important;
+  background:radial-gradient(circle at 35% 25%,#317b65,#102b27 75%) !important;
+  font-size:8px !important;
+}
+
+/* More compact on smaller phones */
+@media(max-width:380px) {
+  #stickArea {
+    width:94px !important;
+    height:94px !important;
+  }
+
+  #stick {
+    left:20px !important;
+    top:20px !important;
+  }
+
+  .actions {
+    grid-template-columns:52px 64px 52px !important;
+    grid-template-rows:54px 54px !important;
+    gap:4px !important;
+  }
+
+  .action {
+    width:51px !important;
+    height:51px !important;
+    font-size:8px !important;
+  }
+
+  #fire {
+    width:63px !important;
+    height:63px !important;
+  }
+
+  #controls {
+    padding:0 6px !important;
+  }
+}
+`;
+
+document.head.appendChild(diabloStyle12);
+
+// Shorter labels for the circular action buttons.
+document.getElementById('fire').textContent = 'ATTACK';
+document.getElementById('nova').textContent = 'NOVA';
+document.getElementById('dodge').textContent = 'DODGE';
+document.getElementById('skillsButton').textContent = 'SKILLS';
+document.getElementById('inventoryButton').textContent = 'BAG';
+
+// Keep cooldown labels visible as combat updates.
+const originalUpdateHUD12 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD12();
+
+  const novaButton = document.getElementById('nova');
+  const dodgeButton = document.getElementById('dodge');
+
+  novaButton.textContent =
+    novaCooldown > 0
+      ? novaCooldown.toFixed(1) + 's'
+      : 'NOVA';
+
+  dodgeButton.textContent =
+    dodgeCooldown > 0
+      ? dodgeCooldown.toFixed(1) + 's'
+      : 'DODGE';
+};
+
+// Update title information.
+document.title = 'ECLIPSE — Worlds Beyond 0.12';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.11') ||
+      p.textContent.includes('0.10')) {
+    p.textContent = 'DIABLO COMBAT INTERFACE — UPDATE 0.12';
+  }
+});
+
+console.log('ECLIPSE 0.12 — DIABLO COMBAT INTERFACE LOADED');
+
 </script>
 </body>
 </html>
