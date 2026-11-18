@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#08090d">
-<title>ECLIPSE — Worlds Beyond 0.3</title>
+<title>ECLIPSE — Worlds Beyond 0.4</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08090d;color:#eee;font-family:Arial,sans-serif;touch-action:none}
@@ -36,6 +36,17 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 #nova{background:#47305d;border-color:#a17cc3}
 #dodge{background:#253e4c;border-color:#6995a8}
 #inventoryButton{background:#51401f;border-color:#c9a15b}
+#skillsButton{background:#263d4a;border-color:#6c9eb5}
+#skillTree{position:fixed;z-index:16;inset:0;background:#05060bf2;display:none;align-items:center;justify-content:center;padding:14px}
+.skillPanel{width:min(96%,520px);max-height:90%;overflow:auto;background:linear-gradient(145deg,#17232b,#0d0d13);border:1px solid #648da0;border-radius:10px;padding:16px}
+.skillGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.skill{background:#101922;border:1px solid #456273;border-radius:7px;padding:11px;font-size:12px}
+.skill button{width:100%;margin-top:9px;background:#214456;border-color:#6799ad;font-size:10px}
+.skill button:disabled{opacity:.35}
+#bossBar{position:fixed;z-index:8;top:12px;left:50%;transform:translateX(-50%);width:min(78%,430px);display:none;pointer-events:none;text-align:center}
+#bossName{font-size:11px;letter-spacing:3px;color:#ff929b;text-shadow:0 0 10px #d22;margin-bottom:5px}
+#bossHealth{height:9px;background:#241116;border:1px solid #a54b57;border-radius:8px;overflow:hidden}
+#bossFill{height:100%;width:100%;background:linear-gradient(90deg,#7b1528,#ff596a)}
 #lookHint{position:fixed;z-index:2;right:100px;bottom:20px;color:#ffffff55;font-size:9px;letter-spacing:1px;pointer-events:none;display:none}
 #inventory{position:fixed;z-index:15;inset:0;background:#05060bea;display:none;align-items:center;justify-content:center;padding:14px}
 .invPanel{width:min(96%,540px);max-height:90%;overflow:auto;background:linear-gradient(145deg,#211b25,#0d0d13);border:1px solid #8a5969;border-radius:10px;padding:16px}
@@ -68,7 +79,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
   <div class="subtitle">WORLDS BEYOND</div>
   <p class="intro">An unknown world. A dying signal. Something is hunting you in the darkness.<br><br>Survive the frontier. Discover what waits beyond the eclipse.</p>
   <button id="enterButton">ENTER THE FRONTIER</button>
-  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — VERSION 0.3</p>
+  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — BOSS AWAKENING 0.4</p>
  </div>
 </div>
 
@@ -82,6 +93,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
   <div class="hudLine"><span>SHARDS</span><span id="shardText">0</span></div>
   <div class="hudLine"><span>HOSTILES</span><span id="enemyText">0</span></div>
   <div class="hudLine"><span>ARMOR</span><span id="armorText">0</span></div>
+  <div class="hudLine"><span>SKILL POINTS</span><span id="skillPointHud">0</span></div>
  </div>
 </div>
 
@@ -95,6 +107,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
   <div id="stick"></div>
  </div>
  <div class="actions">
+  <button class="action" id="skillsButton">SKILLS</button>
   <button class="action" id="inventoryButton">INVENTORY</button>
   <button class="action" id="fire">PLASMA FIRE</button>
   <button class="action" id="nova">NOVA BLAST</button>
@@ -104,6 +117,8 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 
 <div id="help">LEFT THUMB: MOVE · RIGHT THUMB: AIM / ROTATE · FIRE · NOVA · DODGE</div>
 
+<div id="bossBar"><div id="bossName">THE ABYSSAL WARDEN</div><div id="bossHealth"><div id="bossFill"></div></div></div>
+<div id="skillTree"><div class="skillPanel"><div class="invHeader"><h2>SKILL TREE</h2><button id="closeSkills">CLOSE ✕</button></div><div class="hudLine"><span>AVAILABLE SKILL POINTS</span><span id="skillPoints">0</span></div><div class="skillGrid" id="skillGrid"></div></div></div>
 <div id="inventory">
  <div class="invPanel">
   <div class="invHeader">
@@ -138,6 +153,10 @@ let inventoryOpen=false;
 let equipped={Weapon:null,Helmet:null,Chest:null,Gloves:null,Boots:null,Accessory:null};
 let bag=[];
 let itemId=0;
+let skillPoints=0;
+let skills={power:0,vitality:0,nova:0,armor:0};
+let boss=null;
+let novaBoostActive=false;
 let autoTarget=null;
 
 const rarityNames=['common','uncommon','rare','epic','legendary'];
@@ -236,6 +255,7 @@ function createEnemy(x,z){
 
 function spawnWave(){
  wave++;
+ if(wave%3===0)createBoss();
  for(let i=0;i<5+Math.min(wave,5);i++){
   const a=Math.random()*Math.PI*2,d=18+Math.random()*18;
   createEnemy(player.position.x+Math.cos(a)*d,player.position.z+Math.sin(a)*d);
@@ -285,7 +305,7 @@ function collectCrystal(c){
  }
 }
 
-function damageEnemy(e,amount){
+function damageEnemyBase(e,amount){
  if(!enemies.includes(e))return;
  e.userData.hp-=amount;
  e.scale.setScalar(1.07);
@@ -303,7 +323,8 @@ function checkLevel(){
  while(xp>=level*100){
   xp-=level*100;level++;
   maxHealth+=10;health=Math.min(maxHealth,health+30);
-  showMessage('LEVEL UP — LEVEL '+level,2);
+  skillPoints++;
+  showMessage('LEVEL UP — LEVEL '+level+' · SKILL POINT +1',2);
  }
 }
 
@@ -328,7 +349,7 @@ function findTarget(){
  return best;
 }
 
-function shoot(){
+function shootBase(){
  if(fireCooldown>0)return;
  fireCooldown=.28;
  const dir=getAimDirection();
@@ -343,7 +364,7 @@ function shoot(){
  projectiles.push(orb);
 }
 
-function nova(){
+function novaBase(){
  if(novaCooldown>0){showMessage('NOVA RECHARGING',.7);return}
  novaCooldown=5;
  const ring=makeMesh(new THREE.TorusGeometry(1,.09,8,48),mats.glow,player.position.x,.25,player.position.z);
@@ -352,6 +373,7 @@ function nova(){
  for(const e of [...enemies]){
   if(e.position.distanceTo(player.position)<9)damageEnemy(e,45+level*2);
  }
+ if(boss&&boss.position.distanceTo(player.position)<11)damageEnemy(boss,45+level*2);
  showMessage('NOVA BLAST',1);
 }
 
@@ -385,7 +407,7 @@ function updatePlayer(dt){
  dodgeCooldown=Math.max(0,dodgeCooldown-dt);
 }
 
-function updateEnemies(dt){
+function updateEnemiesBase(dt){
  for(const e of [...enemies]){
   const dx=player.position.x-e.position.x,dz=player.position.z-e.position.z;
   const dist=Math.hypot(dx,dz);
@@ -397,7 +419,7 @@ function updateEnemies(dt){
    e.userData.attack-=dt;
    if(e.userData.attack<=0&&dodgeTime<=0){
     const reduction=equipmentStats.armor/(equipmentStats.armor+30);
-    const damage=8*(1-reduction);
+    const damage=8*(1-reduction)*(1-skills.armor*.08);
     health=Math.max(0,health-damage);
     e.userData.attack=1.1;
     showMessage('YOU ARE UNDER ATTACK',.5);
@@ -412,7 +434,7 @@ function respawn(){
  showMessage('RECONSTRUCTED — RETURN TO THE FRONTIER',2);
 }
 
-function updateProjectiles(dt){
+function updateProjectilesBase(dt){
  for(const p of [...projectiles]){
   p.position.addScaledVector(p.userData.velocity,dt);
   p.userData.life-=dt;
@@ -460,7 +482,7 @@ function updateCamera(dt){
  camera.lookAt(player.position.x,1.35,player.position.z);
 }
 
-function updateHUD(){
+function updateHUDBase(){
  $('healthText').textContent=Math.ceil(health)+' / '+maxHealth;
  $('healthFill').style.width=(health/maxHealth*100)+'%';
  $('levelText').textContent='LEVEL '+level;
@@ -597,7 +619,7 @@ function animate(){
  const dt=Math.min(clock.getDelta(),.04);
  updatePlayer(dt);updateEnemies(dt);updateProjectiles(dt);
  updateCrystals(dt);updateEffects(dt);updateCamera(dt);updateHUD();
- if(enemies.length===0)spawnWave();
+ if(enemies.length===0&&!boss)spawnWave();
  if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0)$('message').textContent=''}
  renderer.render(scene,camera);
 }
@@ -619,6 +641,116 @@ function startGame(){
  camera.position.set(0,5,9);camera.lookAt(0,1,0);
  animate();
 }
+
+/* ECLIPSE 0.4 — BOSS + SKILL TREE */
+function createBoss(){
+ if(boss&&boss.parent)return;
+ const g=new THREE.Group();
+ const shell=new THREE.MeshStandardMaterial({color:0x40101e,metalness:.45,roughness:.35,emissive:0x650d25,emissiveIntensity:1.1});
+ makeMesh(new THREE.IcosahedronGeometry(1.7,1),shell,0,2.1,0,g).scale.set(1.1,1.25,.9);
+ makeMesh(new THREE.SphereGeometry(.85,16,16),mats.enemy,0,3.5,-.15,g);
+ makeMesh(new THREE.SphereGeometry(.2,10,10),mats.eye,-.35,3.5,-.8,g);
+ makeMesh(new THREE.SphereGeometry(.2,10,10),mats.eye,.35,3.5,-.8,g);
+ for(const side of [-1,1]){
+  const horn=makeMesh(new THREE.ConeGeometry(.32,1.35,7),shell,side*.8,4.25,.05,g);horn.rotation.z=side*-.38;
+  makeMesh(new THREE.CylinderGeometry(.22,.32,1.8,8),shell,side*1.45,1.7,0,g).rotation.z=side*.35;
+ }
+ g.position.set(player.position.x+24,0,player.position.z-24);g.scale.setScalar(1.35);scene.add(g);
+ g.userData={hp:950,maxHp:950,attack:2.2,pulse:4.5,speed:1.05};boss=g;
+ $('bossBar').style.display='block';$('bossFill').style.width='100%';
+ showMessage('WORLD BOSS — THE ABYSSAL WARDEN',3);
+}
+function damageEnemy(e,amount){
+ if(e===boss){
+  e.userData.hp-=amount;$('bossFill').style.width=Math.max(0,e.userData.hp/e.userData.maxHp*100)+'%';
+  if(e.userData.hp<=0){
+   const x=e.position.x,z=e.position.z;scene.remove(e);boss=null;$('bossBar').style.display='none';
+   xp+=300;shards+=12;skillPoints+=2;checkLevel();
+   createLoot(x,z);createLoot(x+2,z+1);
+   showMessage('WARDEN SLAIN — REWARDS + 2 SKILL POINTS',4);
+  }
+  return;
+ }
+ damageEnemyBase(e,novaBoostActive?amount*(1+skills.nova*.12):amount);
+}
+function shoot(){
+ const old=equipmentStats.damage;equipmentStats.damage=old*(1+skills.power*.08);
+ shootBase();equipmentStats.damage=old;
+}
+function nova(){
+ if(novaCooldown>0){novaBase();return}
+ novaBoostActive=true;novaBase();novaBoostActive=false;
+}
+function updateEnemies(dt){
+ updateEnemiesBase(dt);
+ if(!boss||!boss.parent)return;
+ const dx=player.position.x-boss.position.x,dz=player.position.z-boss.position.z,dist=Math.hypot(dx,dz)||1;
+ if(dist>3.2){boss.position.x+=dx/dist*boss.userData.speed*dt;boss.position.z+=dz/dist*boss.userData.speed*dt}
+ boss.rotation.y=Math.atan2(-dx,-dz);boss.rotation.z=Math.sin(clock.elapsedTime*2)*.04;
+ boss.userData.attack-=dt;boss.userData.pulse-=dt;
+ if(boss.userData.attack<=0){
+  if(dist<5.5&&dodgeTime<=0){
+   const ar=equipmentStats.armor/(equipmentStats.armor+30);
+   health=Math.max(0,health-18*(1-ar)*(1-skills.armor*.08));
+   showMessage('WARDEN SMASH!',.8);if(health<=0)respawn();
+  }else if(dist>=5.5){
+   const orb=makeMesh(new THREE.SphereGeometry(.42,12,12),new THREE.MeshBasicMaterial({color:0xff496a}),boss.position.x,2,boss.position.z);
+   orb.userData={velocity:new THREE.Vector3(dx,0,dz).normalize().multiplyScalar(13),life:3,damage:14,bossShot:true};projectiles.push(orb);
+  }
+  boss.userData.attack=2.3;
+ }
+ if(boss.userData.pulse<=0&&dist<13){
+  boss.userData.pulse=5;
+  const ring=makeMesh(new THREE.TorusGeometry(1,.13,8,48),new THREE.MeshBasicMaterial({color:0xff3154,transparent:true}),boss.position.x,.2,boss.position.z);
+  ring.rotation.x=Math.PI/2;effects.push({mesh:ring,life:.8,max:.8});
+  if(dist<9&&dodgeTime<=0){health=Math.max(0,health-12*(1-skills.armor*.08));showMessage('WARDEN SHOCKWAVE',.8);if(health<=0)respawn()}
+ }
+}
+function updateProjectiles(dt){
+ for(const p of [...projectiles]){
+  p.position.addScaledVector(p.userData.velocity,dt);p.userData.life-=dt;
+  if(p.userData.bossShot){
+   if(p.position.distanceTo(new THREE.Vector3(player.position.x,1,player.position.z))<1.1){
+    if(dodgeTime<=0){
+     const ar=equipmentStats.armor/(equipmentStats.armor+30);
+     health=Math.max(0,health-p.userData.damage*(1-ar)*(1-skills.armor*.08));
+     showMessage('VOID BOLT HIT',.7);if(health<=0)respawn();
+    }
+    scene.remove(p);projectiles=projectiles.filter(a=>a!==p);continue;
+   }
+  }else{
+   let hit=null;
+   for(const e of enemies)if(p.position.distanceTo(new THREE.Vector3(e.position.x,1,e.position.z))<1){hit=e;break}
+   if(hit){damageEnemy(hit,p.userData.damage);scene.remove(p);projectiles=projectiles.filter(a=>a!==p);continue}
+   if(boss&&p.position.distanceTo(new THREE.Vector3(boss.position.x,2,boss.position.z))<2.3){
+    damageEnemy(boss,p.userData.damage);scene.remove(p);projectiles=projectiles.filter(a=>a!==p);continue;
+   }
+  }
+  if(p.userData.life<=0){scene.remove(p);projectiles=projectiles.filter(a=>a!==p)}
+ }
+}
+function updateHUD(){
+ updateHUDBase();$('enemyText').textContent=enemies.length+(boss?' + BOSS':'');
+ $('skillPointHud').textContent=skillPoints;
+}
+function renderSkills(){
+ $('skillPoints').textContent=skillPoints;
+ const defs=[['power','POWER SHOT','Weapon damage +8% per rank.'],['vitality','VITALITY','Maximum health +15 per rank.'],['nova','NOVA MASTERY','Nova damage +12% per rank.'],['armor','IRON WILL','Incoming damage reduced by 8% per rank.']];
+ const root=$('skillGrid');root.innerHTML='';
+ for(const [key,name,desc] of defs){
+  const card=document.createElement('div');card.className='skill';
+  const h=document.createElement('strong');h.textContent=name;
+  const p=document.createElement('p');p.textContent=desc;
+  const rank=document.createElement('div');rank.style.color='#9bb9c8';rank.textContent='RANK '+skills[key]+' / 5';
+  const btn=document.createElement('button');btn.textContent='UNLOCK / UPGRADE';btn.disabled=skillPoints<=0||skills[key]>=5;
+  btn.onclick=()=>{if(skillPoints<=0||skills[key]>=5)return;skillPoints--;skills[key]++;if(key==='vitality'){maxHealth+=15;health+=15}renderSkills();updateHUD();showMessage(name+' UPGRADED',1)};
+  card.append(h,p,rank,btn);root.appendChild(card);
+ }
+}
+function openSkills(){inventoryOpen=true;fireHeld=false;$('skillTree').style.display='flex';renderSkills()}
+function closeSkills(){inventoryOpen=false;$('skillTree').style.display='none'}
+$('skillsButton').addEventListener('pointerdown',e=>{e.preventDefault();openSkills()});
+$('closeSkills').addEventListener('click',closeSkills);
 
 $('enterButton').addEventListener('click',startGame);
 window.addEventListener('resize',()=>{
