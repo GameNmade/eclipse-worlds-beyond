@@ -3649,6 +3649,131 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.17 — TACTICAL MINIMAP LOADED');
 
+/* =========================================
+   ECLIPSE 0.18 — QUEST & EVENT TRACKER
+   ========================================= */
+
+const trackerStyle18 = document.createElement('style');
+
+trackerStyle18.textContent = `
+#objectiveTracker18 {
+  position:fixed;
+  top:76px;
+  left:10px;
+  width:155px;
+  z-index:8;
+  padding:10px;
+  border:1px solid rgba(91,185,199,.55);
+  border-radius:8px;
+  background:rgba(5,12,20,.88);
+  box-shadow:0 3px 12px #0009;
+  pointer-events:none;
+  color:#d9e9ed;
+  font-family:Arial,sans-serif;
+}
+#objectiveTracker18 .trackerTitle18 {
+  color:#75dce9;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:2px;
+  margin-bottom:8px;
+}
+#objectiveTracker18 .trackerSection18 {
+  color:#e8bd62;
+  font-size:9px;
+  font-weight:900;
+  margin-top:7px;
+}
+#objectiveTracker18 .trackerText18 {
+  color:#c4d2d8;
+  font-size:10px;
+  line-height:1.5;
+  margin-top:3px;
+}
+#objectiveTracker18 .trackerEvent18 {
+  color:#55eaff;
+}
+`;
+
+document.head.appendChild(trackerStyle18);
+
+const tracker18 = document.createElement('div');
+tracker18.id = 'objectiveTracker18';
+
+tracker18.innerHTML = `
+  <div class="trackerTitle18">OBJECTIVES</div>
+  <div class="trackerSection18">ARIN'S CONTRACT</div>
+  <div class="trackerText18" id="questTrackerText18">
+    Speak to Arin for a mission.
+  </div>
+  <div class="trackerSection18">WORLD EVENT</div>
+  <div class="trackerText18 trackerEvent18"
+       id="eventTrackerText18">
+    Rift activity pending.
+  </div>
+`;
+
+document.body.appendChild(tracker18);
+
+function updateObjectiveTracker18() {
+  if (!started) {
+    tracker18.style.display = 'none';
+    return;
+  }
+
+  tracker18.style.display = 'block';
+
+  const questText =
+    document.getElementById('questTrackerText18');
+
+  const eventText =
+    document.getElementById('eventTrackerText18');
+
+  if (questStatus09 === 'available') {
+    questText.textContent =
+      'Speak to Arin to accept the hunting contract.';
+  } else if (questStatus09 === 'active') {
+    questText.textContent =
+      'Eliminate hostiles: ' + questKills09 + ' / 5';
+  } else if (questStatus09 === 'complete') {
+    questText.textContent =
+      'Return to Arin to collect your reward!';
+  } else {
+    questText.textContent =
+      'Contract complete. Well done, Hunter!';
+  }
+
+  if (dungeon) {
+    eventText.textContent =
+      'Dungeon expedition in progress.';
+  } else if (riftActive10) {
+    eventText.textContent =
+      'RIFT SURGE: ' + riftRemaining10 + ' / 4 hostiles';
+  } else {
+    eventText.textContent =
+      'Next Rift Surge: ' + Math.max(0,nextRift10) + 's';
+  }
+}
+
+// Extend the existing HUD without replacing it.
+const originalUpdateHUD18 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD18();
+  updateObjectiveTracker18();
+};
+
+document.title = 'ECLIPSE — Worlds Beyond 0.18';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.17') ||
+      p.textContent.includes('TACTICAL MINIMAP')) {
+    p.textContent = 'QUEST & EVENT TRACKER — UPDATE 0.18';
+  }
+});
+
+console.log('ECLIPSE 0.18 — QUEST TRACKER LOADED');
+
 </script>
 </body>
 </html>
