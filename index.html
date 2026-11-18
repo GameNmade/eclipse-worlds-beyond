@@ -136,7 +136,14 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 </div>
 
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+let THREE;
+
+try {
+  THREE = await import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js');
+} catch (error) {
+  console.warn('Primary 3D library failed. Trying backup CDN.', error);
+  THREE = await import('https://unpkg.com/three@0.180.0/build/three.module.js');
+}
 
 const $=id=>document.getElementById(id);
 let scene,camera,renderer,player,clock,worldFloor;
