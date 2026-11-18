@@ -3,52 +3,75 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#08090d">
-<title>ECLIPSE — Worlds Beyond</title>
+<title>ECLIPSE — Worlds Beyond 0.3</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07080c;color:#eee;font-family:Arial,sans-serif;touch-action:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08090d;color:#eee;font-family:Arial,sans-serif;touch-action:none}
 canvas{display:block}
-#titleScreen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at center,#25202a 0%,#101017 48%,#050609 100%)}
-.titleContent{padding:25px;width:min(92%,560px)}
-h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#e9e4e8;text-shadow:0 0 25px #a33b43}
-.subtitle{letter-spacing:5px;color:#b8a7ad;font-size:12px;margin:12px 0 45px}
-.intro{font-size:14px;line-height:1.7;color:#c5c1c5;max-width:390px;margin:0 auto 32px}
-button{font-weight:bold;letter-spacing:2px;color:#fff;background:linear-gradient(135deg,#76252d,#32151c);border:1px solid #b95760;border-radius:5px;padding:15px 22px}
-#enterButton{font-size:15px;min-width:230px}
-#hud{position:fixed;z-index:3;top:12px;left:12px;right:12px;pointer-events:none;display:none}
-.hudPanel{background:#08090bd9;border:1px solid #69434a;padding:10px 12px;border-radius:5px;max-width:310px}
-.hudLine{display:flex;justify-content:space-between;gap:15px;font-size:12px;letter-spacing:1px;margin-bottom:7px}
-.bar{height:8px;background:#29252a;border-radius:8px;overflow:hidden;margin-bottom:7px}
+button{color:white;font-weight:bold;letter-spacing:1px;background:#25151e;border:1px solid #80505d;border-radius:7px;padding:10px}
+#titleScreen{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse,#30212b,#101017 55%,#050609)}
+.titleContent{padding:22px;width:min(92%,550px)}
+h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-shadow:0 0 25px #a33b43}
+.subtitle{letter-spacing:5px;color:#b8a7ad;font-size:12px;margin:12px 0 35px}
+.intro{font-size:14px;line-height:1.7;color:#c5c1c5;margin:0 auto 30px;max-width:390px}
+#enterButton{font-size:15px;min-width:230px;padding:16px;background:linear-gradient(135deg,#76252d,#32151c)}
+#hud{position:fixed;z-index:5;top:10px;left:10px;pointer-events:none;display:none}
+.hudPanel{background:#08090be8;border:1px solid #69434a;padding:9px 11px;border-radius:6px;width:205px}
+.hudLine{display:flex;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:1px;margin-bottom:6px}
+.bar{height:7px;background:#29252a;border-radius:8px;overflow:hidden;margin-bottom:7px}
 .barFill{height:100%;width:100%;transition:width .15s}
 #healthFill{background:#b53640}
 #xpFill{background:#c28a39}
-#message{position:fixed;top:27%;left:0;right:0;text-align:center;color:#f0d8d8;font-size:18px;letter-spacing:3px;text-shadow:0 0 12px #d33;pointer-events:none;z-index:4}
-#controls{position:fixed;z-index:5;inset:auto 0 15px;display:none;justify-content:space-between;align-items:end;padding:0 15px;pointer-events:none}
-.pad{display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:4px;pointer-events:auto}
-.control{width:48px;height:48px;padding:0;border-radius:8px;background:#17151bd9;border:1px solid #80616a;color:#eee;font-size:18px;letter-spacing:0;touch-action:none}
-#up{grid-column:2;grid-row:1}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
-.actions{display:flex;flex-direction:column;gap:9px;align-items:end;pointer-events:auto}
-.action{width:88px;height:49px;font-size:10px;padding:4px;letter-spacing:1px;background:#32151cdd}
+#message{position:fixed;top:25%;left:0;right:0;text-align:center;color:#f0d8d8;font-size:17px;letter-spacing:2px;text-shadow:0 0 12px #d33;pointer-events:none;z-index:7}
+#crosshair{position:fixed;z-index:3;left:50%;top:50%;width:15px;height:15px;border:1px solid #fff9;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;display:none}
+#controls{position:fixed;z-index:6;inset:auto 0 12px;display:none;justify-content:space-between;align-items:end;padding:0 12px;pointer-events:none}
+#stickArea{width:132px;height:132px;border:2px solid #8b7180;background:#17151b99;border-radius:50%;position:relative;pointer-events:auto;touch-action:none}
+#stick{position:absolute;width:54px;height:54px;border-radius:50%;left:37px;top:37px;background:#8a5367cc;border:2px solid #d6a5b6;pointer-events:none}
+#stickLabel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:2px;color:#ffffff66;pointer-events:none}
+.actions{display:flex;flex-direction:column;gap:7px;align-items:end;pointer-events:auto}
+.action{width:88px;height:43px;font-size:10px;padding:4px;letter-spacing:1px;background:#32151cdd}
 #fire{background:#70262d}
 #nova{background:#47305d;border-color:#a17cc3}
 #dodge{background:#253e4c;border-color:#6995a8}
-#help{position:fixed;z-index:3;bottom:12px;left:50%;transform:translateX(-50%);font-size:10px;color:#aaa;white-space:nowrap;pointer-events:none;display:none}
-#crosshair{position:fixed;z-index:2;left:50%;top:50%;width:12px;height:12px;border:1px solid #ffffff70;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;display:none}
-@media(min-width:800px){#controls{padding:0 35px}.control{width:55px;height:55px}.pad{grid-template-columns:55px 55px 55px;grid-template-rows:55px 55px 55px}}
+#inventoryButton{background:#51401f;border-color:#c9a15b}
+#lookHint{position:fixed;z-index:2;right:100px;bottom:20px;color:#ffffff55;font-size:9px;letter-spacing:1px;pointer-events:none;display:none}
+#inventory{position:fixed;z-index:15;inset:0;background:#05060bea;display:none;align-items:center;justify-content:center;padding:14px}
+.invPanel{width:min(96%,540px);max-height:90%;overflow:auto;background:linear-gradient(145deg,#211b25,#0d0d13);border:1px solid #8a5969;border-radius:10px;padding:16px}
+.invHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.invHeader h2{letter-spacing:3px;font-size:20px;margin:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0}
+.stat{background:#11131a;border:1px solid #40333e;border-radius:5px;padding:9px;text-align:center;font-size:11px}
+.stat b{display:block;font-size:17px;margin-top:4px}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.slot{background:#11131a;border:1px solid #51434e;border-radius:6px;padding:9px;min-height:85px;text-align:left;font-size:11px}
+.slot small{display:block;color:#aaa;margin-bottom:7px}
+.item{margin-top:10px;background:#14131b;border:1px solid #51434e;padding:10px;border-radius:6px;font-size:12px}
+.item button{float:right;padding:6px 9px;font-size:10px}
+.common{color:#ccc}.uncommon{color:#55d78a}.rare{color:#55baff}.epic{color:#c18aff}.legendary{color:#ffb84d}
+#closeInventory{background:#54242e}
+#help{position:fixed;z-index:4;bottom:5px;left:50%;transform:translateX(-50%);font-size:9px;color:#aaa;white-space:nowrap;pointer-events:none;display:none}
+@media(max-width:380px){
+ #stickArea{width:112px;height:112px}
+ #stick{left:29px;top:29px}
+ .action{width:76px;height:39px}
+ .hudPanel{width:180px}
+}
 </style>
 </head>
 <body>
+
 <div id="titleScreen">
  <div class="titleContent">
   <h1>ECLIPSE</h1>
   <div class="subtitle">WORLDS BEYOND</div>
   <p class="intro">An unknown world. A dying signal. Something is hunting you in the darkness.<br><br>Survive the frontier. Discover what waits beyond the eclipse.</p>
   <button id="enterButton">ENTER THE FRONTIER</button>
-  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">A NEW WORLD IS WAITING</p>
+  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — VERSION 0.3</p>
  </div>
 </div>
+
 <div id="hud">
  <div class="hudPanel">
   <div class="hudLine"><span>EXPLORER</span><span id="levelText">LEVEL 1</span></div>
@@ -56,54 +79,94 @@ button{font-weight:bold;letter-spacing:2px;color:#fff;background:linear-gradient
   <div class="bar"><div class="barFill" id="healthFill"></div></div>
   <div class="hudLine"><span>EXPERIENCE</span><span id="xpText">0 / 100 XP</span></div>
   <div class="bar"><div class="barFill" id="xpFill"></div></div>
-  <div class="hudLine"><span>ENERGY SHARDS</span><span id="shardText">0</span></div>
+  <div class="hudLine"><span>SHARDS</span><span id="shardText">0</span></div>
   <div class="hudLine"><span>HOSTILES</span><span id="enemyText">0</span></div>
+  <div class="hudLine"><span>ARMOR</span><span id="armorText">0</span></div>
  </div>
 </div>
+
 <div id="message"></div>
 <div id="crosshair"></div>
+<div id="lookHint">DRAG TO AIM / ROTATE</div>
+
 <div id="controls">
- <div class="pad">
-  <button class="control" id="up">▲</button>
-  <button class="control" id="left">◀</button>
-  <button class="control" id="down">▼</button>
-  <button class="control" id="right">▶</button>
+ <div id="stickArea">
+  <div id="stickLabel">MOVE</div>
+  <div id="stick"></div>
  </div>
  <div class="actions">
+  <button class="action" id="inventoryButton">INVENTORY</button>
   <button class="action" id="fire">PLASMA FIRE</button>
   <button class="action" id="nova">NOVA BLAST</button>
   <button class="action" id="dodge">DODGE</button>
  </div>
 </div>
-<div id="help">WASD / ARROWS: MOVE · SPACE: FIRE · Q: NOVA · SHIFT: DODGE</div>
+
+<div id="help">LEFT THUMB: MOVE · RIGHT THUMB: AIM / ROTATE · FIRE · NOVA · DODGE</div>
+
+<div id="inventory">
+ <div class="invPanel">
+  <div class="invHeader">
+   <h2>EXPLORER ARMORY</h2>
+   <button id="closeInventory">CLOSE ✕</button>
+  </div>
+  <div class="stats">
+   <div class="stat">DAMAGE<b id="statDamage">28</b></div>
+   <div class="stat">ARMOR<b id="statArmor">0</b></div>
+   <div class="stat">LEVEL<b id="statLevel">1</b></div>
+  </div>
+  <h3 style="font-size:12px;letter-spacing:2px;color:#c5a6ad">EQUIPPED GEAR</h3>
+  <div class="slots" id="gearSlots"></div>
+  <h3 style="font-size:12px;letter-spacing:2px;color:#c5a6ad;margin-top:18px">BACKPACK / LOOT</h3>
+  <div id="bag"></div>
+ </div>
+</div>
+
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 const $=id=>document.getElementById(id);
 let scene,camera,renderer,player,clock;
-let started=false,health=100,level=1,xp=0,shards=0,score=0;
+let started=false,health=100,maxHealth=100,level=1,xp=0,shards=0;
 let enemies=[],projectiles=[],crystals=[],effects=[];
-let keys={},move={x:0,z:0},fireHeld=false;
+let fireHeld=false,keys={};
 let fireCooldown=0,novaCooldown=0,dodgeCooldown=0,dodgeTime=0;
 let messageTimer=0,wave=1;
-const WORLD=150;
-const tempV=new THREE.Vector3();
+let cameraYaw=0,cameraPitch=.12;
+let joystick={x:0,y:0},stickPointer=null,lookPointer=null,lastLook=null;
+let inventoryOpen=false;
+let equipped={Weapon:null,Helmet:null,Chest:null,Gloves:null,Boots:null,Accessory:null};
+let bag=[];
+let itemId=0;
+let autoTarget=null;
+
+const rarityNames=['common','uncommon','rare','epic','legendary'];
+const rarityColors={common:0xaaaaaa,uncommon:0x55d78a,rare:0x55baff,epic:0xc18aff,legendary:0xffb84d};
+const gearTypes=['Weapon','Helmet','Chest','Gloves','Boots','Accessory'];
+const weaponNames=['Frontier Blaster','Void Repeater','Plasma Reaver','Eclipse Cannon'];
+const armorNames={
+ Helmet:['Scout Visor','Void Mask','Hunter Crown'],
+ Chest:['Frontier Shell','Stalker Vest','Abyss Carapace'],
+ Gloves:['Grip Gauntlets','Pulse Grips','Hunter Claws'],
+ Boots:['Wanderer Boots','Void Striders','Phase Walkers'],
+ Accessory:['Signal Core','Aether Charm','Hunter Emblem']
+};
+let equipmentStats={damage:28,armor:0};
+
 const mats={
  ground:new THREE.MeshStandardMaterial({color:0x28272b,roughness:1}),
  rock:new THREE.MeshStandardMaterial({color:0x39343a,roughness:1}),
  armor:new THREE.MeshStandardMaterial({color:0x34343c,metalness:.65,roughness:.4}),
- red:new THREE.MeshStandardMaterial({color:0x9d2734,emissive:0x5c0710,emissiveIntensity:1.8}),
  glow:new THREE.MeshBasicMaterial({color:0x65dfff}),
  crystal:new THREE.MeshStandardMaterial({color:0x50d9e9,emissive:0x087b9b,emissiveIntensity:2}),
  enemy:new THREE.MeshStandardMaterial({color:0x29232c,roughness:.7}),
- eye:new THREE.MeshBasicMaterial({color:0xff263d})
+ eye:new THREE.MeshBasicMaterial({color:0xff263d}),
+ red:new THREE.MeshBasicMaterial({color:0xff263d})
 };
 
-function showMessage(text,duration=2){
- $('message').textContent=text;messageTimer=duration;
-}
-function makeMesh(geometry,material,x,y,z,parent=scene){
- const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);parent.add(m);return m;
+function showMessage(t,d=1.5){$('message').textContent=t;messageTimer=d}
+function makeMesh(g,m,x,y,z,parent=scene){
+ const o=new THREE.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o;
 }
 function makeWorld(){
  scene=new THREE.Scene();
@@ -111,10 +174,8 @@ function makeWorld(){
  scene.fog=new THREE.FogExp2(0x101016,.014);
  camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,400);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
  renderer.setSize(innerWidth,innerHeight);
- renderer.shadowMap.enabled=true;
- renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.15;
@@ -123,143 +184,207 @@ function makeWorld(){
 
  scene.add(new THREE.HemisphereLight(0x78809c,0x171016,1.25));
  const moon=new THREE.DirectionalLight(0xa4b6d5,2.1);
- moon.position.set(-35,55,25);moon.castShadow=true;
- moon.shadow.mapSize.set(1024,1024);scene.add(moon);
+ moon.position.set(-35,55,25);scene.add(moon);
  const redLight=new THREE.PointLight(0x8d182c,65,55);
  redLight.position.set(15,8,-15);scene.add(redLight);
 
- const floor=makeMesh(new THREE.PlaneGeometry(WORLD,WORLD,40,40),mats.ground,0,-.35,0);
- floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;
-
- // Distant alien terrain and scattered rocks
- for(let i=0;i<180;i++){
-  const x=(Math.random()-.5)*WORLD,z=(Math.random()-.5)*WORLD;
+ const floor=makeMesh(new THREE.PlaneGeometry(150,150),mats.ground,0,-.35,0);
+ floor.rotation.x=-Math.PI/2;
+ for(let i=0;i<150;i++){
+  const x=(Math.random()-.5)*145,z=(Math.random()-.5)*145;
   if(Math.abs(x)<5&&Math.abs(z)<5)continue;
   const h=.5+Math.random()*2.6;
   const rock=makeMesh(new THREE.DodecahedronGeometry(.6+Math.random()*1.5,0),mats.rock,x,h/2-.15,z);
   rock.scale.set(1,h,1);rock.rotation.set(Math.random(),Math.random(),Math.random());
-  rock.castShadow=true;rock.receiveShadow=true;
  }
- // Alien moon
- const moonMesh=makeMesh(new THREE.SphereGeometry(9,24,24),new THREE.MeshBasicMaterial({color:0x77717b}),-45,48,-105);
- // Stars
- const starGeo=new THREE.BufferGeometry(),starPositions=[];
- for(let i=0;i<650;i++)starPositions.push((Math.random()-.5)*260,25+Math.random()*100,(Math.random()-.5)*260);
- starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));
+ makeMesh(new THREE.SphereGeometry(9,24,24),new THREE.MeshBasicMaterial({color:0x77717b}),-45,48,-105);
+ const positions=[];
+ for(let i=0;i<650;i++)positions.push((Math.random()-.5)*260,25+Math.random()*100,(Math.random()-.5)*260);
+ const starGeo=new THREE.BufferGeometry();
+ starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
  scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xc7d6ed,size:.38})));
 }
 
 function createPlayer(){
  player=new THREE.Group();
- const body=makeMesh(new THREE.CapsuleGeometry(.48,.95,5,8),mats.armor,0,1,0,player);
- body.castShadow=true;
- const chest=makeMesh(new THREE.BoxGeometry(.75,.55,.38),mats.rock,0,1.25,-.08,player);
- chest.castShadow=true;
+ makeMesh(new THREE.CapsuleGeometry(.48,.95,5,8),mats.armor,0,1,0,player);
+ makeMesh(new THREE.BoxGeometry(.75,.55,.38),mats.rock,0,1.25,-.08,player);
  const head=makeMesh(new THREE.SphereGeometry(.32,12,12),mats.armor,0,2.05,0,player);
  head.scale.set(.85,1.05,.85);
- const visor=makeMesh(new THREE.BoxGeometry(.42,.12,.12),mats.glow,0,2.08,-.27,player);
- const pack=makeMesh(new THREE.BoxGeometry(.52,.7,.3),mats.rock,0,1.25,.34,player);
- const lamp=makeMesh(new THREE.SphereGeometry(.09,8,8),mats.red,0,1.45,-.29,player);
+ makeMesh(new THREE.BoxGeometry(.42,.12,.12),mats.glow,0,2.08,-.27,player);
+ makeMesh(new THREE.BoxGeometry(.52,.7,.3),mats.rock,0,1.25,.34,player);
  player.position.set(0,0,0);scene.add(player);
 }
 
-function spawnCrystal(x,z){
- const crystal=makeMesh(new THREE.OctahedronGeometry(.42),mats.crystal,x,.6,z);
- crystal.userData={baseY:.6,phase:Math.random()*6};
- crystals.push(crystal);
-}
 function createEnemy(x,z){
  const e=new THREE.Group();
  const body=makeMesh(new THREE.IcosahedronGeometry(.7,1),mats.enemy,0,.95,0,e);
- body.scale.set(1,1.15,.85);body.castShadow=true;
- const head=makeMesh(new THREE.SphereGeometry(.38,12,12),mats.enemy,0,1.65,-.12,e);
- const eye1=makeMesh(new THREE.SphereGeometry(.09,8,8),mats.eye,-.18,1.7,-.45,e);
- const eye2=makeMesh(new THREE.SphereGeometry(.09,8,8),mats.eye,.18,1.7,-.45,e);
- for(let side of [-1,1]){
+ body.scale.set(1,1.15,.85);
+ makeMesh(new THREE.SphereGeometry(.38,12,12),mats.enemy,0,1.65,-.12,e);
+ makeMesh(new THREE.SphereGeometry(.09,8,8),mats.eye,-.18,1.7,-.45,e);
+ makeMesh(new THREE.SphereGeometry(.09,8,8),mats.eye,.18,1.7,-.45,e);
+ for(const side of [-1,1]){
   const horn=makeMesh(new THREE.ConeGeometry(.13,.55,6),mats.enemy,side*.37,2.05,.02,e);
   horn.rotation.z=side*-.35;
   const claw=makeMesh(new THREE.ConeGeometry(.13,.55,6),mats.enemy,side*.48,.45,-.2,e);
   claw.rotation.z=side*.6;
  }
  e.position.set(x,0,z);
- e.userData={hp:55,maxHp:55,attack:0,hitFlash:0,speed:1.3+Math.random()*.45};
+ e.userData={hp:65,maxHp:65,attack:0,speed:1.3+Math.random()*.45};
  scene.add(e);enemies.push(e);
 }
+
 function spawnWave(){
  wave++;
- for(let i=0;i<5;i++){
-  const angle=Math.random()*Math.PI*2,dist=17+Math.random()*13;
-  createEnemy(player.position.x+Math.cos(angle)*dist,player.position.z+Math.sin(angle)*dist);
+ for(let i=0;i<5+Math.min(wave,5);i++){
+  const a=Math.random()*Math.PI*2,d=18+Math.random()*18;
+  createEnemy(player.position.x+Math.cos(a)*d,player.position.z+Math.sin(a)*d);
  }
- showMessage('HOSTILE SIGNALS DETECTED',2.5);
+ showMessage('WAVE '+wave+' — HOSTILES DETECTED',2.5);
 }
+
+function spawnCrystal(x,z){
+ const c=makeMesh(new THREE.OctahedronGeometry(.42),mats.crystal,x,.6,z);
+ c.userData={phase:Math.random()*6};
+ crystals.push(c);
+}
+
+function createLoot(x,z){
+ const roll=Math.random();
+ const rarity=roll<.48?0:roll<.75?1:roll<.91?2:roll<.985?3:4;
+ const type=gearTypes[Math.floor(Math.random()*gearTypes.length)];
+ const names=type==='Weapon'?weaponNames:armorNames[type];
+ const name=names[Math.floor(Math.random()*names.length)];
+ const power=rarity+1;
+ const item={
+  id:++itemId,type,name,rarity:rarityNames[rarity],
+  power,damage:type==='Weapon'?4+power*5:0,
+  armor:type==='Weapon'?0:1+power*2,
+  x,z
+ };
+ const color=rarityColors[item.rarity];
+ const gem=makeMesh(new THREE.OctahedronGeometry(.36),new THREE.MeshBasicMaterial({color}),x,.65,z);
+ gem.userData.item=item;
+ crystals.push(gem);
+}
+
+function recalculateStats(){
+ equipmentStats={damage:28,armor:0};
+ for(const item of Object.values(equipped)){
+  if(item){equipmentStats.damage+=item.damage;equipmentStats.armor+=item.armor}
+ }
+}
+
+function collectCrystal(c){
+ scene.remove(c);crystals=crystals.filter(a=>a!==c);
+ if(c.userData.item){
+  bag.push(c.userData.item);
+  showMessage(c.userData.item.rarity.toUpperCase()+' '+c.userData.item.type+' FOUND!',1.5);
+ }else{
+  shards++;showMessage('ENERGY SHARD +1',.7);
+ }
+}
+
 function damageEnemy(e,amount){
- if(!e||!enemies.includes(e))return;
+ if(!enemies.includes(e))return;
  e.userData.hp-=amount;
- e.scale.setScalar(1.08);
+ e.scale.setScalar(1.07);
  setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},65);
  if(e.userData.hp<=0){
   scene.remove(e);enemies=enemies.filter(a=>a!==e);
-  xp+=35;score+=2;
-  if(Math.random()<.7)spawnCrystal(e.position.x,e.position.z);
-  checkLevel();
-  showMessage('HOSTILE ELIMINATED',.8);
+  xp+=35;
+  if(Math.random()<.75)createLoot(e.position.x,e.position.z);
+  if(Math.random()<.65)spawnCrystal(e.position.x+1,e.position.z);
+  checkLevel();showMessage('HOSTILE ELIMINATED',.8);
  }
 }
+
 function checkLevel(){
  while(xp>=level*100){
-  xp-=level*100;level++;health=Math.min(100,health+20);
+  xp-=level*100;level++;
+  maxHealth+=10;health=Math.min(maxHealth,health+30);
   showMessage('LEVEL UP — LEVEL '+level,2);
  }
 }
+
+function getAimDirection(){
+ return new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)).normalize();
+}
+
+function findTarget(){
+ const dir=getAimDirection();
+ let best=null,bestScore=Infinity;
+ for(const e of enemies){
+  const to=new THREE.Vector3(e.position.x-player.position.x,0,e.position.z-player.position.z);
+  const dist=to.length();
+  if(dist>28||dist<.1)continue;
+  to.normalize();
+  const dot=dir.dot(to);
+  if(dot>.65){
+   const score=dist+(1-dot)*12;
+   if(score<bestScore){bestScore=score;best=e}
+  }
+ }
+ return best;
+}
+
 function shoot(){
  if(fireCooldown>0)return;
- fireCooldown=.32;
- const direction=new THREE.Vector3(0,0,-1).applyQuaternion(player.quaternion).normalize();
- const orb=makeMesh(new THREE.SphereGeometry(.16,10,10),mats.glow,
+ fireCooldown=.28;
+ const dir=getAimDirection();
+ const target=findTarget();
+ if(target){
+  const to=new THREE.Vector3(target.position.x-player.position.x,0,target.position.z-player.position.z).normalize();
+  if(dir.dot(to)>.78)dir.lerp(to,.28).normalize();
+ }
+ const orb=makeMesh(new THREE.SphereGeometry(.17,10,10),mats.glow,
   player.position.x,1.5,player.position.z);
- orb.userData={velocity:direction.multiplyScalar(30),life:1.5,damage:28};
+ orb.userData={velocity:dir.multiplyScalar(34),life:1.5,damage:equipmentStats.damage};
  projectiles.push(orb);
 }
+
 function nova(){
  if(novaCooldown>0){showMessage('NOVA RECHARGING',.7);return}
  novaCooldown=5;
  const ring=makeMesh(new THREE.TorusGeometry(1,.09,8,48),mats.glow,player.position.x,.25,player.position.z);
  ring.rotation.x=Math.PI/2;
- effects.push({mesh:ring,life:.65,max:.65,kind:'nova'});
+ effects.push({mesh:ring,life:.65,max:.65});
  for(const e of [...enemies]){
-  if(e.position.distanceTo(player.position)<9)damageEnemy(e,42);
+  if(e.position.distanceTo(player.position)<9)damageEnemy(e,45+level*2);
  }
  showMessage('NOVA BLAST',1);
 }
+
 function dodge(){
  if(dodgeCooldown>0)return;
  dodgeCooldown=2.2;dodgeTime=.32;
  showMessage('DODGE',.45);
 }
+
 function updatePlayer(dt){
- let x=0,z=0;
- if(keys.KeyW||keys.ArrowUp)z-=1;
- if(keys.KeyS||keys.ArrowDown)z+=1;
- if(keys.KeyA||keys.ArrowLeft)x-=1;
- if(keys.KeyD||keys.ArrowRight)x+=1;
- x+=move.x;z+=move.z;
- const length=Math.hypot(x,z);
- if(length>0){
-  x/=length;z/=length;
-  const speed=dodgeTime>0?27:7;
-  player.position.x+=x*speed*dt;
-  player.position.z+=z*speed*dt;
-  player.rotation.y=Math.atan2(-x,-z);
+ const inputX=joystick.x+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+ const inputY=joystick.y+(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+ let x=inputX,z=inputY;
+ const len=Math.hypot(x,z);
+ if(len>.08){
+  x/=Math.max(1,len);z/=Math.max(1,len);
+  const sin=Math.sin(cameraYaw),cos=Math.cos(cameraYaw);
+  const worldX=x*cos+z*sin;
+  const worldZ=-x*sin+z*cos;
+  const speed=dodgeTime>0?25:7;
+  player.position.x+=worldX*speed*dt;
+  player.position.z+=worldZ*speed*dt;
+  player.rotation.y=Math.atan2(-worldX,-worldZ);
  }
- player.position.x=THREE.MathUtils.clamp(player.position.x,-WORLD/2+3,WORLD/2-3);
- player.position.z=THREE.MathUtils.clamp(player.position.z,-WORLD/2+3,WORLD/2-3);
+ player.position.x=THREE.MathUtils.clamp(player.position.x,-70,70);
+ player.position.z=THREE.MathUtils.clamp(player.position.z,-70,70);
  if(fireHeld||keys.Space)shoot();
  if(dodgeTime>0)dodgeTime-=dt;
  fireCooldown=Math.max(0,fireCooldown-dt);
  novaCooldown=Math.max(0,novaCooldown-dt);
  dodgeCooldown=Math.max(0,dodgeCooldown-dt);
 }
+
 function updateEnemies(dt){
  for(const e of [...enemies]){
   const dx=player.position.x-e.position.x,dz=player.position.z-e.position.z;
@@ -271,17 +396,22 @@ function updateEnemies(dt){
   }else{
    e.userData.attack-=dt;
    if(e.userData.attack<=0&&dodgeTime<=0){
-    health=Math.max(0,health-8);e.userData.attack=1.1;
+    const reduction=equipmentStats.armor/(equipmentStats.armor+30);
+    const damage=8*(1-reduction);
+    health=Math.max(0,health-damage);
+    e.userData.attack=1.1;
     showMessage('YOU ARE UNDER ATTACK',.5);
     if(health<=0)respawn();
    }
   }
  }
 }
+
 function respawn(){
- health=100;player.position.set(0,0,0);
+ health=maxHealth;player.position.set(0,0,0);
  showMessage('RECONSTRUCTED — RETURN TO THE FRONTIER',2);
 }
+
 function updateProjectiles(dt){
  for(const p of [...projectiles]){
   p.position.addScaledVector(p.userData.velocity,dt);
@@ -298,16 +428,15 @@ function updateProjectiles(dt){
   }
  }
 }
+
 function updateCrystals(dt){
  for(const c of [...crystals]){
   c.rotation.y+=dt*1.8;
-  c.position.y=c.userData.baseY+Math.sin(clock.elapsedTime*2+c.userData.phase)*.15;
-  if(c.position.distanceTo(player.position)<1.4){
-   scene.remove(c);crystals=crystals.filter(a=>a!==c);
-   shards++;score++;showMessage('ENERGY SHARD +1',.6);
-  }
+  c.position.y=.6+Math.sin(clock.elapsedTime*2+(c.userData.phase||0))*.15;
+  if(c.position.distanceTo(player.position)<1.4)collectCrystal(c);
  }
 }
+
 function updateEffects(dt){
  for(const fx of [...effects]){
   fx.life-=dt;
@@ -318,26 +447,153 @@ function updateEffects(dt){
   if(fx.life<=0){scene.remove(fx.mesh);effects=effects.filter(a=>a!==fx)}
  }
 }
+
 function updateCamera(dt){
- const offset=new THREE.Vector3(0,5.2,9).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);
+ const horizontal=9*Math.cos(cameraPitch);
+ const offset=new THREE.Vector3(
+  Math.sin(cameraYaw)*horizontal,
+  3.5+Math.sin(cameraPitch)*9,
+  Math.cos(cameraYaw)*horizontal
+ );
  const desired=player.position.clone().add(offset);
  camera.position.lerp(desired,1-Math.pow(.001,dt));
- camera.lookAt(player.position.x,1.25,player.position.z-1);
+ camera.lookAt(player.position.x,1.35,player.position.z);
 }
+
 function updateHUD(){
- $('healthText').textContent=Math.ceil(health)+' / 100';
- $('healthFill').style.width=health+'%';
+ $('healthText').textContent=Math.ceil(health)+' / '+maxHealth;
+ $('healthFill').style.width=(health/maxHealth*100)+'%';
  $('levelText').textContent='LEVEL '+level;
  $('xpText').textContent=xp+' / '+level*100+' XP';
  $('xpFill').style.width=(xp/(level*100)*100)+'%';
  $('shardText').textContent=shards;
  $('enemyText').textContent=enemies.length;
+ $('armorText').textContent=equipmentStats.armor;
  $('nova').textContent=novaCooldown>0?'NOVA '+novaCooldown.toFixed(1)+'s':'NOVA BLAST';
  $('dodge').textContent=dodgeCooldown>0?'DODGE '+dodgeCooldown.toFixed(1)+'s':'DODGE';
 }
+
+function itemDescription(item){
+ return item.name+' · '+item.rarity.toUpperCase()+' · '+(item.damage?'+'+item.damage+' damage':'+'+item.armor+' armor');
+}
+
+function renderInventory(){
+ recalculateStats();
+ $('statDamage').textContent=equipmentStats.damage;
+ $('statArmor').textContent=equipmentStats.armor;
+ $('statLevel').textContent=level;
+ const slots=$('gearSlots');
+ slots.innerHTML='';
+ for(const type of gearTypes){
+  const item=equipped[type];
+  const el=document.createElement('div');
+  el.className='slot';
+  el.innerHTML='<small>'+type.toUpperCase()+'</small><span class="'+(item?item.rarity:'common')+'">'+(item?item.name:'Empty')+'</span>';
+  if(item){
+   const b=document.createElement('button');b.textContent='REMOVE';
+   b.onclick=()=>{bag.push(item);equipped[type]=null;renderInventory()};
+   el.appendChild(b);
+  }
+  slots.appendChild(el);
+ }
+ const bagEl=$('bag');bagEl.innerHTML='';
+ if(!bag.length){bagEl.innerHTML='<p style="color:#888;font-size:12px">No equipment yet. Defeat hostiles to find loot.</p>';return}
+ for(const item of bag){
+  const el=document.createElement('div');el.className='item';
+  const name=document.createElement('strong');name.className=item.rarity;name.textContent=item.name+' — '+item.rarity.toUpperCase();
+  const desc=document.createElement('div');desc.style.color='#aaa';desc.style.marginTop='6px';desc.textContent=itemDescription(item);
+  const b=document.createElement('button');b.textContent='EQUIP';
+  b.onclick=()=>{
+   const old=equipped[item.type];
+   equipped[item.type]=item;
+   bag=bag.filter(a=>a.id!==item.id);
+   if(old)bag.push(old);
+   recalculateStats();renderInventory();showMessage(item.name+' EQUIPPED',1);
+  };
+  el.append(name,b,desc);bagEl.appendChild(el);
+ }
+}
+
+function openInventory(){
+ inventoryOpen=true;$('inventory').style.display='flex';
+ fireHeld=false;renderInventory();
+}
+function closeInventory(){
+ inventoryOpen=false;$('inventory').style.display='none';
+}
+
+function bindHold(id,callback){
+ const el=$(id);
+ el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);callback(true)});
+ const stop=e=>{e.preventDefault();callback(false)};
+ el.addEventListener('pointerup',stop);
+ el.addEventListener('pointercancel',stop);
+ el.addEventListener('lostpointercapture',()=>callback(false));
+}
+
+function setupJoystick(){
+ const area=$('stickArea'),knob=$('stick');
+ function update(e){
+  const r=area.getBoundingClientRect();
+  let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  const max=r.width*.34,len=Math.hypot(dx,dy);
+  if(len>max){dx=dx/len*max;dy=dy/len*max}
+  joystick.x=dx/max;joystick.y=dy/max;
+  knob.style.transform=`translate(${dx}px,${dy}px)`;
+ }
+ area.addEventListener('pointerdown',e=>{
+  e.preventDefault();stickPointer=e.pointerId;area.setPointerCapture(e.pointerId);update(e);
+ });
+ area.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)update(e)});
+ function release(e){
+  if(e.pointerId!==stickPointer)return;
+  stickPointer=null;joystick.x=0;joystick.y=0;knob.style.transform='translate(0,0)';
+ }
+ area.addEventListener('pointerup',release);
+ area.addEventListener('pointercancel',release);
+}
+
+function setupCameraTouch(){
+ renderer.domElement.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'||inventoryOpen)return;
+  if(e.clientX<innerWidth*.43)return;
+  lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};
+  renderer.domElement.setPointerCapture(e.pointerId);
+ });
+ renderer.domElement.addEventListener('pointermove',e=>{
+  if(e.pointerId!==lookPointer||!lastLook)return;
+  const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;
+  cameraYaw-=dx*.008;
+  cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.004,-.25,.65);
+  lastLook={x:e.clientX,y:e.clientY};
+ });
+ function end(e){if(e.pointerId===lookPointer){lookPointer=null;lastLook=null}}
+ renderer.domElement.addEventListener('pointerup',end);
+ renderer.domElement.addEventListener('pointercancel',end);
+}
+
+function setupControls(){
+ setupJoystick();
+ setupCameraTouch();
+ bindHold('fire',on=>fireHeld=on);
+ $('nova').addEventListener('pointerdown',e=>{e.preventDefault();nova()});
+ $('dodge').addEventListener('pointerdown',e=>{e.preventDefault();dodge()});
+ $('inventoryButton').addEventListener('pointerdown',e=>{e.preventDefault();openInventory()});
+ $('closeInventory').addEventListener('click',closeInventory);
+ window.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='KeyQ')nova();
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight')dodge();
+  if(e.code==='KeyI')openInventory();
+  if(e.code==='Space')e.preventDefault();
+ });
+ window.addEventListener('keyup',e=>keys[e.code]=false);
+}
+
 function animate(){
  if(!started)return;
  requestAnimationFrame(animate);
+ if(inventoryOpen){renderer.render(scene,camera);return}
  const dt=Math.min(clock.getDelta(),.04);
  updatePlayer(dt);updateEnemies(dt);updateProjectiles(dt);
  updateCrystals(dt);updateEffects(dt);updateCamera(dt);updateHUD();
@@ -345,46 +601,31 @@ function animate(){
  if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0)$('message').textContent=''}
  renderer.render(scene,camera);
 }
-function bindHold(id,callback){
- const el=$(id);
- el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);callback(true)});
- const stop=e=>{e.preventDefault();callback(false)};
- el.addEventListener('pointerup',stop);el.addEventListener('pointercancel',stop);
- el.addEventListener('lostpointercapture',()=>callback(false));
-}
-function setupControls(){
- const dirs={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
- for(const [id,v] of Object.entries(dirs)){
-  bindHold(id,on=>{move.x=on?v[0]:(move.x===v[0]?0:move.x);move.z=on?v[1]:(move.z===v[1]?0:move.z)});
- }
- bindHold('fire',on=>fireHeld=on);
- $('nova').addEventListener('pointerdown',e=>{e.preventDefault();nova()});
- $('dodge').addEventListener('pointerdown',e=>{e.preventDefault();dodge()});
- window.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyQ')nova();if(e.code==='ShiftLeft'||e.code==='ShiftRight')dodge();if(e.code==='Space')e.preventDefault()});
- window.addEventListener('keyup',e=>keys[e.code]=false);
-}
+
 function startGame(){
  if(started)return;
  started=true;
  $('titleScreen').style.display='none';
  $('hud').style.display='block';$('controls').style.display='flex';
- $('crosshair').style.display='block';
- $('help').style.display='block';
+ $('crosshair').style.display='block';$('help').style.display='block';
+ $('lookHint').style.display='block';
  makeWorld();createPlayer();setupControls();
  for(let i=0;i<5;i++){
   const a=Math.PI*2*i/5;
   createEnemy(Math.cos(a)*18,Math.sin(a)*18);
  }
  for(let i=0;i<12;i++)spawnCrystal((Math.random()-.5)*65,(Math.random()-.5)*65);
+ cameraYaw=0;cameraPitch=.12;
  camera.position.set(0,5,9);camera.lookAt(0,1,0);
  animate();
 }
+
 $('enterButton').addEventListener('click',startGame);
 window.addEventListener('resize',()=>{
  if(!renderer||!camera)return;
  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
- renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
 });
 </script>
 </body>
