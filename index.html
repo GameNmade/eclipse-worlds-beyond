@@ -3449,6 +3449,206 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.16 — MERCHANT & SELLING LOADED');
 
+/* =========================================
+   ECLIPSE 0.17 — TACTICAL MINIMAP
+   ========================================= */
+
+const miniStyle17 = document.createElement('style');
+
+miniStyle17.textContent = `
+#miniMap17 {
+  position:fixed;
+  top:76px;
+  right:12px;
+  width:116px;
+  height:116px;
+  z-index:8;
+  pointer-events:none;
+  opacity:.94;
+  filter:drop-shadow(0 0 8px #000);
+}
+
+#miniMap17 canvas {
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+#miniLabel17 {
+  position:absolute;
+  top:119px;
+  left:0;
+  width:100%;
+  text-align:center;
+  color:#a9c5d4;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:2px;
+  text-shadow:0 1px 4px #000;
+}
+`;
+
+document.head.appendChild(miniStyle17);
+
+const miniWrap17 = document.createElement('div');
+miniWrap17.id = 'miniMap17';
+
+const miniCanvas17 = document.createElement('canvas');
+miniCanvas17.width = 180;
+miniCanvas17.height = 180;
+
+const miniLabel17 = document.createElement('div');
+miniLabel17.id = 'miniLabel17';
+miniLabel17.textContent = 'TACTICAL RADAR';
+
+miniWrap17.append(miniCanvas17,miniLabel17);
+document.body.appendChild(miniWrap17);
+
+const miniCtx17 = miniCanvas17.getContext('2d');
+
+function drawMiniMap17() {
+  if (!started || !player) {
+    miniWrap17.style.display = 'none';
+    return;
+  }
+
+  miniWrap17.style.display = 'block';
+
+  const ctx = miniCtx17;
+  const cx = 90;
+  const cy = 90;
+  const radius = 78;
+  const range = 24;
+
+  ctx.clearRect(0,0,180,180);
+
+  // Radar background.
+  ctx.fillStyle = 'rgba(5,12,22,.86)';
+  ctx.beginPath();
+  ctx.arc(cx,cy,radius,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.save();
+
+  ctx.beginPath();
+  ctx.arc(cx,cy,radius,0,Math.PI*2);
+  ctx.clip();
+
+  // Radar grid.
+  ctx.strokeStyle = 'rgba(90,170,195,.24)';
+  ctx.lineWidth = 1;
+
+  [25,50,75].forEach(r => {
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.stroke();
+  });
+
+  ctx.beginPath();
+  ctx.moveTo(cx-radius,cy);
+  ctx.lineTo(cx+radius,cy);
+  ctx.moveTo(cx,cy-radius);
+  ctx.lineTo(cx,cy+radius);
+  ctx.stroke();
+
+  // Convert world positions to radar positions.
+  function radarPoint17(position) {
+    const dx = position.x-player.position.x;
+    const dz = position.z-player.position.z;
+
+    const scale = radius/range;
+
+    return {
+      x:cx+Math.max(-range,Math.min(range,dx))*scale,
+      y:cy+Math.max(-range,Math.min(range,dz))*scale
+    };
+  }
+
+  function marker17(position,color,size) {
+    if (!position) return;
+
+    const p = radarPoint17(position);
+
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 7;
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,size,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+  }
+
+  // Nearby hostiles.
+  for (const enemy of enemies) {
+    marker17(enemy.position,'#ff5555',3.5);
+  }
+
+  // Settlement NPCs.
+  if (typeof npcGroups09 !== 'undefined') {
+    for (const npc of npcGroups09) {
+      marker17(npc.position,'#e8bd62',4);
+    }
+  }
+
+  // Boss.
+  if (boss && boss.parent) {
+    marker17(boss.position,'#c18aff',7);
+  }
+
+  // Portal.
+  if (portal && portal.mesh && portal.mesh.parent) {
+    marker17(portal.mesh.position,'#55dfff',5);
+  }
+
+  // Player marker.
+  ctx.fillStyle = '#65ff9a';
+  ctx.shadowColor = '#65ff9a';
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  ctx.arc(cx,cy,5,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+
+  // Radar border.
+  ctx.strokeStyle = 'rgba(105,220,245,.85)';
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.arc(cx,cy,radius,0,Math.PI*2);
+  ctx.stroke();
+
+  // North indicator.
+  ctx.fillStyle = '#d7f4ff';
+  ctx.font = 'bold 11px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('N',cx,17);
+}
+
+// Add radar updates without replacing existing HUD systems.
+const originalUpdateHUD17 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD17();
+  drawMiniMap17();
+};
+
+document.title = 'ECLIPSE — Worlds Beyond 0.17';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.16') ||
+      p.textContent.includes('SELLING')) {
+    p.textContent = 'TACTICAL MINIMAP — UPDATE 0.17';
+  }
+});
+
+console.log('ECLIPSE 0.17 — TACTICAL MINIMAP LOADED');
+
 </script>
 </body>
 </html>
