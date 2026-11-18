@@ -3365,20 +3365,7 @@ sellAll16.onclick = (e) => {
   );
 };
 
-  if (!confirm(
-    'Sell all '+bag.length+' backpack items for '+total+
-    ' Energy Shards?\n\nEquipped equipment will NOT be sold.'
-  )) return;
-
-  const count = bag.length;
-  bag = [];
-  shards += total;
-
-  saveGame();
-  renderInventory();
-  showMessage(count+' ITEMS SOLD — +'+total+' SHARDS',2.5);
-};
-
+  sellToolbar16.append(sellBalance16,sellAll16);
 sellToolbar16.append(sellBalance16,sellAll16);
 
 // Insert toolbar above the backpack contents.
