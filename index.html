@@ -1254,6 +1254,460 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 });
 
 console.log('ECLIPSE 0.8 WORLD EXPANSION LOADED');
+
+/* =========================================
+   ECLIPSE 0.9 — THE LIVING UNIVERSE
+   STAGE 1: NPCs, QUESTS & MERCHANTS
+   ========================================= */
+
+let questStatus09 = 'available';
+let questKills09 = 0;
+let medkits09 = 0;
+let npcGroups09 = [];
+
+const livingStyle09 = document.createElement('style');
+livingStyle09.textContent = `
+#interact09 {
+  display:none;
+  background:#285044;
+  border-color:#71c6a4;
+}
+#livingPanel09 {
+  position:fixed;z-index:25;inset:0;
+  display:none;align-items:center;justify-content:center;
+  padding:14px;background:#03050bed;
+}
+.livingBox09 {
+  width:min(96%,480px);max-height:90%;
+  overflow:auto;padding:18px;
+  border:1px solid #719c9d;border-radius:10px;
+  background:linear-gradient(145deg,#172b30,#0b1018);
+}
+.livingBox09 h2 {
+  color:#d5f0e8;letter-spacing:3px;
+  font-size:20px;margin:0 0 12px;
+}
+.livingBox09 p {
+  color:#b5c7c5;font-size:13px;line-height:1.6;
+}
+.livingBox09 button {
+  width:100%;margin:6px 0;padding:12px;
+  background:#214a43;border-color:#65a994;
+}
+.livingBox09 button:disabled {opacity:.35}
+#closeLiving09 {
+  background:#54242e!important;
+  border-color:#a65c69!important;
+}
+.livingStatus09 {
+  padding:10px;background:#101d20;
+  border:1px solid #385c55;border-radius:6px;
+  margin:10px 0;color:#c6e6d9;font-size:12px;
+}
+`;
+
+document.head.appendChild(livingStyle09);
+
+const interact09 = document.createElement('button');
+interact09.id = 'interact09';
+interact09.className = 'action';
+interact09.textContent = 'INTERACT';
+document.querySelector('.actions').insertBefore(
+  interact09,
+  document.getElementById('worldButton08')
+);
+
+const livingPanel09 = document.createElement('div');
+livingPanel09.id = 'livingPanel09';
+livingPanel09.innerHTML = `
+ <div class="livingBox09">
+  <h2>FRONTIER SETTLEMENT</h2>
+  <p id="livingDialogue09">
+   Travelers and merchants have established a small outpost.
+  </p>
+  <div class="livingStatus09" id="questStatus09"></div>
+
+  <button id="questAction09">SPEAK WITH ARIN — WAYFINDER</button>
+  <button id="merchantAction09">TRADE WITH VEX — QUARTERMASTER</button>
+  <button id="closeLiving09">RETURN TO ADVENTURE</button>
+ </div>
+`;
+document.body.appendChild(livingPanel09);
+
+function createNPC09(x,z,name,color) {
+  const npc = new THREE.Group();
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness:.35,
+    roughness:.5
+  });
+
+  const glowMat = new THREE.MeshBasicMaterial({
+    color:0x75eacb
+  });
+
+  makeMesh(
+    new THREE.CapsuleGeometry(.42,.85,4,8),
+    bodyMat,0,1.05,0,npc
+  );
+
+  makeMesh(
+    new THREE.SphereGeometry(.3,12,12),
+    bodyMat,0,1.95,0,npc
+  );
+
+  makeMesh(
+    new THREE.BoxGeometry(.48,.12,.12),
+    glowMat,0,1.97,-.27,npc
+  );
+
+  makeMesh(
+    new THREE.OctahedronGeometry(.24),
+    glowMat,0,2.8,0,npc
+  );
+
+  npc.position.set(x,0,z);
+  npc.userData.npcName = name;
+  scene.add(npc);
+  npcGroups09.push(npc);
+}
+
+function createSettlement09() {
+  for (const npc of npcGroups09) {
+    scene.remove(npc);
+  }
+
+  npcGroups09 = [];
+
+  createNPC09(-5,-8,'ARIN',0x426d70);
+  createNPC09(5,-8,'VEX',0x947044);
+}
+
+function nearestNPC09() {
+  if (!player) return null;
+
+  let nearest = null;
+  let distance = 9;
+
+  for (const npc of npcGroups09) {
+    const d = npc.position.distanceTo(player.position);
+    if (d < distance) {
+      distance = d;
+      nearest = npc;
+    }
+  }
+
+  return nearest;
+}
+
+function updateQuestStatus09() {
+  const label = document.getElementById('questStatus09');
+  if (!label) return;
+
+  if (questStatus09 === 'available') {
+    label.textContent = 'MISSION AVAILABLE: Hunt 5 hostile creatures.';
+  } else if (questStatus09 === 'active') {
+    label.textContent = 'HUNTING CONTRACT: ' + questKills09 + ' / 5 hostiles eliminated.';
+  } else if (questStatus09 === 'complete') {
+    label.textContent = 'MISSION COMPLETE! Return to Arin for your reward.';
+  } else {
+    label.textContent = 'CONTRACT COMPLETED. Arin has another assignment.';
+  }
+}
+
+function openLiving09() {
+  if (!started) return;
+
+  const npc = nearestNPC09();
+
+  if (!npc) {
+    showMessage('MOVE CLOSER TO A SETTLEMENT NPC',1.5);
+    return;
+  }
+
+  inventoryOpen = true;
+  fireHeld = false;
+  livingPanel09.style.display = 'flex';
+
+  document.getElementById('livingDialogue09').textContent =
+    npc.userData.npcName === 'ARIN'
+      ? 'ARIN: The hostile population is growing. Help us thin their numbers and I will reward you.'
+      : 'VEX: I have equipment and supplies. Shards accepted. No refunds.';
+
+  updateQuestStatus09();
+}
+
+function closeLiving09() {
+  livingPanel09.style.display = 'none';
+  inventoryOpen = false;
+}
+
+interact09.addEventListener('pointerdown',e => {
+  e.preventDefault();
+  openLiving09();
+});
+
+document.getElementById('closeLiving09')
+  .addEventListener('click',closeLiving09);
+
+document.getElementById('questAction09')
+  .addEventListener('click',() => {
+
+    if (questStatus09 === 'available' ||
+        questStatus09 === 'claimed') {
+      questStatus09 = 'active';
+      questKills09 = 0;
+      showMessage('NEW CONTRACT — ELIMINATE 5 HOSTILES',2);
+    }
+
+    else if (questStatus09 === 'complete') {
+      questStatus09 = 'claimed';
+      xp += 150;
+      shards += 12;
+      skillPoints++;
+      checkLevel();
+      showMessage('CONTRACT COMPLETE — REWARDS RECEIVED',2.5);
+    }
+
+    else {
+      showMessage('CONTRACT PROGRESS: '+questKills09+' / 5',1.5);
+    }
+
+    updateQuestStatus09();
+    saveGame();
+  });
+
+function buyLivingItem09(type) {
+  const products = {
+    medkit:{cost:8},
+    weapon:{cost:35},
+    armor:{cost:30}
+  };
+
+  const product = products[type];
+
+  if (!product || shards < product.cost) {
+    showMessage('NOT ENOUGH ENERGY SHARDS',1.5);
+    return;
+  }
+
+  shards -= product.cost;
+
+  if (type === 'medkit') {
+    medkits09++;
+    showMessage('MEDKIT PURCHASED',1.2);
+  }
+
+  if (type === 'weapon') {
+    bag.push({
+      id:++itemId,
+      type:'Weapon',
+      name:'Quartermaster Pulse Rifle',
+      rarity:'rare',
+      power:4,
+      damage:16,
+      armor:0
+    });
+    showMessage('PULSE RIFLE ADDED TO BACKPACK',1.5);
+  }
+
+  if (type === 'armor') {
+    bag.push({
+      id:++itemId,
+      type:'Chest',
+      name:'Quartermaster Aegis Armor',
+      rarity:'rare',
+      power:4,
+      damage:0,
+      armor:12
+    });
+    showMessage('AEGIS ARMOR ADDED TO BACKPACK',1.5);
+  }
+
+  saveGame();
+  updateHUD();
+}
+
+function openMerchant09() {
+  document.getElementById('livingDialogue09').textContent =
+    'VEX: Choose your supplies. Your current balance is '+shards+' energy shards.';
+
+  document.getElementById('livingPanel09').querySelector('.livingStatus09')
+    .textContent = 'ENERGY SHARDS: '+shards+' · MEDKITS: '+medkits09;
+
+  const action = document.getElementById('questAction09');
+  const merchant = document.getElementById('merchantAction09');
+
+  action.style.display = 'none';
+  merchant.style.display = 'none';
+
+  const box = document.querySelector('.livingBox09');
+
+  let shop = document.getElementById('shopItems09');
+
+  if (!shop) {
+    shop = document.createElement('div');
+    shop.id = 'shopItems09';
+    box.insertBefore(shop,document.getElementById('closeLiving09'));
+  }
+
+  shop.innerHTML = `
+    <button id="buyMedkit09">BUY MEDKIT — 8 SHARDS</button>
+    <button id="buyWeapon09">BUY PULSE RIFLE — 35 SHARDS</button>
+    <button id="buyArmor09">BUY AEGIS ARMOR — 30 SHARDS</button>
+    <button id="useMedkit09">USE MEDKIT — OWNED: ${medkits09}</button>
+    <button id="backLiving09">BACK</button>
+  `;
+
+  document.getElementById('buyMedkit09').onclick =
+    () => {buyLivingItem09('medkit');openMerchant09()};
+
+  document.getElementById('buyWeapon09').onclick =
+    () => {buyLivingItem09('weapon');openMerchant09()};
+
+  document.getElementById('buyArmor09').onclick =
+    () => {buyLivingItem09('armor');openMerchant09()};
+
+  document.getElementById('useMedkit09').onclick = () => {
+    if (medkits09 <= 0) {
+      showMessage('NO MEDKITS AVAILABLE',1.2);
+      return;
+    }
+
+    if (health >= maxHealth) {
+      showMessage('VITALITY ALREADY FULL',1.2);
+      return;
+    }
+
+    medkits09--;
+    health = Math.min(maxHealth,health+50);
+    saveGame();
+    updateHUD();
+    openMerchant09();
+    showMessage('MEDKIT USED — +50 VITALITY',1.5);
+  };
+
+  document.getElementById('backLiving09').onclick = () => {
+    shop.remove();
+    action.style.display = '';
+    merchant.style.display = '';
+    openLiving09();
+  };
+}
+
+document.getElementById('merchantAction09')
+  .addEventListener('click',openMerchant09);
+
+// Count defeated hostiles for the active contract.
+const originalDamageEnemy09 = damageEnemyBase;
+
+damageEnemyBase = function(enemy,amount) {
+  const alive = enemies.includes(enemy);
+
+  originalDamageEnemy09(enemy,amount);
+
+  if (
+    alive &&
+    !enemies.includes(enemy) &&
+    questStatus09 === 'active'
+  ) {
+    questKills09++;
+
+    if (questKills09 >= 5) {
+      questKills09 = 5;
+      questStatus09 = 'complete';
+      showMessage('HUNTING CONTRACT COMPLETE — RETURN TO ARIN',3);
+    }
+
+    updateQuestStatus09();
+    saveGame();
+  }
+};
+
+// Add NPC interaction range to the HUD update.
+const originalUpdateHUD09 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD09();
+
+  interact09.style.display =
+    started && nearestNPC09() ? 'block' : 'none';
+
+  interact09.textContent =
+    nearestNPC09()?.userData.npcName === 'ARIN'
+      ? 'SPEAK TO ARIN'
+      : 'SPEAK TO VEX';
+};
+
+// Save the new 0.9 progress.
+const originalSaveGame09 = saveGame;
+
+saveGame = function() {
+  originalSaveGame09();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+    data.questStatus09 = questStatus09;
+    data.questKills09 = questKills09;
+    data.medkits09 = medkits09;
+
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  } catch(err) {}
+};
+
+const originalLoadGame09 = loadGame;
+
+loadGame = function() {
+  const result = originalLoadGame09();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+
+    if (raw) {
+      const data = JSON.parse(raw);
+
+      questStatus09 = data.questStatus09 || 'available';
+      questKills09 = Math.min(5,Math.max(0,Number(data.questKills09)||0));
+      medkits09 = Math.max(0,Number(data.medkits09)||0);
+    }
+  } catch(err) {}
+
+  return result;
+};
+
+// Start NPCs after the original world and region are ready.
+const originalStartGame09 = startGame;
+
+startGame = function(newGame = false) {
+  if (newGame) {
+    questStatus09 = 'available';
+    questKills09 = 0;
+    medkits09 = 0;
+  }
+
+  originalStartGame09(newGame);
+
+  if (started && scene && player) {
+    createSettlement09();
+  }
+};
+
+// Update version information.
+document.title = 'ECLIPSE — Worlds Beyond 0.9';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.6') ||
+      p.textContent.includes('0.8')) {
+    p.textContent = 'THE LIVING UNIVERSE — UPDATE 0.9';
+  }
+});
+
+console.log('ECLIPSE 0.9 — SETTLEMENT SYSTEM LOADED');
+ 
 </script>
 </body>
 </html>
