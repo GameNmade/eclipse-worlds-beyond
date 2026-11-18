@@ -720,6 +720,215 @@ window.addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
 });
+/* =========================================
+   ECLIPSE 0.7 — CHARACTER CLASS SYSTEM
+   ========================================= */
+
+let activeClass = 'ranger';
+
+const CLASS_SAVE_KEY = 'eclipse_worlds_beyond_save_v06';
+
+const classStyle = document.createElement('style');
+classStyle.textContent = `
+.classSelect {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin:15px auto 20px;
+  max-width:460px;
+}
+.classCard {
+  padding:10px 4px;
+  min-height:75px;
+  font-size:11px;
+  line-height:1.5;
+  background:#151923;
+  border:1px solid #46515f;
+}
+.classCard.active {
+  border:2px solid #e0ad67;
+  background:linear-gradient(145deg,#47301f,#211923);
+  box-shadow:0 0 14px #b9783844;
+}
+.classCard small {
+  display:block;
+  color:#c9b7aa;
+  font-size:9px;
+  font-weight:normal;
+}
+`;
+document.head.appendChild(classStyle);
+
+const classSelector = document.createElement('div');
+classSelector.className = 'classSelect';
+classSelector.innerHTML = `
+  <button class="classCard" data-class="vanguard">
+    VANGUARD
+    <small>HEAVY ARMOR</small>
+    <small>+14 ARMOR</small>
+  </button>
+  <button class="classCard active" data-class="ranger">
+    RANGER
+    <small>PRECISION</small>
+    <small>+18% WEAPON DAMAGE</small>
+  </button>
+  <button class="classCard" data-class="technomancer">
+    TECHNOMANCER
+    <small>ENERGY MASTER</small>
+    <small>+30% NOVA DAMAGE</small>
+  </button>
+`;
+
+document.querySelector('.subtitle').after(classSelector);
+
+function selectEclipseClass(name) {
+  if (!['vanguard','ranger','technomancer'].includes(name)) return;
+
+  activeClass = name;
+
+  document.querySelectorAll('.classCard').forEach(card => {
+    card.classList.toggle('active', card.dataset.class === name);
+  });
+
+  const saved = localStorage.getItem(CLASS_SAVE_KEY);
+
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      data.activeClass = name;
+      localStorage.setItem(CLASS_SAVE_KEY, JSON.stringify(data));
+    } catch (err) {}
+  }
+
+  if (started) {
+    recalculateStats();
+    updateHUD();
+    saveGame();
+  }
+}
+
+document.querySelectorAll('.classCard').forEach(card => {
+  card.addEventListener('click', () => {
+    selectEclipseClass(card.dataset.class);
+  });
+});
+
+// Restore the selected class from an existing adventure.
+try {
+  const saved = JSON.parse(localStorage.getItem(CLASS_SAVE_KEY));
+  if (saved && ['vanguard','ranger','technomancer'].includes(saved.activeClass)) {
+    activeClass = saved.activeClass;
+  }
+} catch (err) {}
+
+selectEclipseClass(activeClass);
+
+// Add the class name to the gameplay HUD.
+const classHud = document.createElement('div');
+classHud.className = 'hudLine';
+classHud.innerHTML = '<span>CLASS</span><span id="classNameHud">RANGER</span>';
+document.querySelector('.hudPanel').children[0].after(classHud);
+
+// Preserve the existing save system while adding class data.
+const originalSaveGame07 = saveGame;
+
+saveGame = function() {
+  originalSaveGame07();
+
+  try {
+    const saved = localStorage.getItem(CLASS_SAVE_KEY);
+    if (!saved) return;
+
+    const data = JSON.parse(saved);
+    data.activeClass = activeClass;
+    localStorage.setItem(CLASS_SAVE_KEY, JSON.stringify(data));
+  } catch (err) {}
+};
+
+// Restore class before the original game loads equipment and stats.
+const originalLoadGame07 = loadGame;
+
+loadGame = function() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CLASS_SAVE_KEY));
+    if (saved && ['vanguard','ranger','technomancer'].includes(saved.activeClass)) {
+      activeClass = saved.activeClass;
+    }
+  } catch (err) {}
+
+  const result = originalLoadGame07();
+
+  selectEclipseClass(activeClass);
+  return result;
+};
+
+// Apply class bonuses whenever equipment stats are recalculated.
+const originalRecalculateStats07 = recalculateStats;
+
+recalculateStats = function() {
+  originalRecalculateStats07();
+
+  if (activeClass === 'vanguard') {
+    equipmentStats.armor += 14;
+  }
+
+  if (activeClass === 'ranger') {
+    equipmentStats.damage = Math.round(equipmentStats.damage * 1.18);
+  }
+};
+
+// Ranger weapon damage is included in the existing shooting system.
+const originalShoot07 = shoot;
+
+shoot = function() {
+  originalShoot07();
+};
+
+// Technomancer gets stronger Nova damage.
+const originalDamageEnemy07 = damageEnemy;
+
+damageEnemy = function(enemy, amount) {
+  if (activeClass === 'technomancer' && novaBoostActive) {
+    amount *= 1.30;
+  }
+
+  originalDamageEnemy07(enemy, amount);
+};
+
+// Technomancer Nova cooldown is shorter.
+const originalNovaBase07 = novaBase;
+
+novaBase = function() {
+  const wasReady = novaCooldown <= 0;
+
+  originalNovaBase07();
+
+  if (wasReady && activeClass === 'technomancer' && novaCooldown > 0) {
+    novaCooldown = 4;
+  }
+};
+
+// Display class in HUD.
+const originalUpdateHUD07 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD07();
+
+  const label = document.getElementById('classNameHud');
+  if (label) label.textContent = activeClass.toUpperCase();
+};
+
+// Update version labels.
+document.title = 'ECLIPSE — Worlds Beyond 0.7';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('SAVE SYSTEM')) {
+    p.textContent = 'CHARACTER CLASSES — UPDATE 0.7';
+  }
+});
+
+console.log('ECLIPSE 0.7 CHARACTER CLASSES LOADED');
+
 </script>
 </body>
 </html>
