@@ -720,215 +720,531 @@ window.addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
 });
+
 /* =========================================
-   ECLIPSE 0.7 — CHARACTER CLASS SYSTEM
+   ECLIPSE 0.8 — WORLDS BEYOND
    ========================================= */
 
-let activeClass = 'ranger';
+let currentRegion08 = 'frontier';
+let regionProps08 = [];
 
-const CLASS_SAVE_KEY = 'eclipse_worlds_beyond_save_v06';
+const regions08 = {
+  frontier: {
+    name: 'THE FRONTIER',
+    level: 'LEVEL 1+',
+    ground: 0x28272b,
+    sky: 0x090a10,
+    fog: 0x101016,
+    density: 0.014,
+    enemy: 0x29232c,
+    hp: 65,
+    speed: 1.35
+  },
+  ashen: {
+    name: 'ASHEN WILDS',
+    level: 'LEVEL 5+',
+    ground: 0x30201d,
+    sky: 0x180908,
+    fog: 0x35120d,
+    density: 0.018,
+    enemy: 0x69251c,
+    hp: 105,
+    speed: 1.55
+  },
+  frost: {
+    name: 'FROSTFALL EXPANSE',
+    level: 'LEVEL 8+',
+    ground: 0x182b3b,
+    sky: 0x071421,
+    fog: 0x17334b,
+    density: 0.016,
+    enemy: 0x39718e,
+    hp: 125,
+    speed: 1.45
+  },
+  verdant: {
+    name: 'VERDANT REACH',
+    level: 'LEVEL 12+',
+    ground: 0x172b20,
+    sky: 0x07150e,
+    fog: 0x15351e,
+    density: 0.019,
+    enemy: 0x397a37,
+    hp: 145,
+    speed: 1.65
+  }
+};
 
-const classStyle = document.createElement('style');
-classStyle.textContent = `
-.classSelect {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:7px;
-  margin:15px auto 20px;
-  max-width:460px;
+const regionStyle08 = document.createElement('style');
+regionStyle08.textContent = `
+#worldMap08 {
+ position:fixed;z-index:18;inset:0;
+ display:none;align-items:center;justify-content:center;
+ padding:14px;background:#03070bed;
 }
-.classCard {
-  padding:10px 4px;
-  min-height:75px;
-  font-size:11px;
-  line-height:1.5;
-  background:#151923;
-  border:1px solid #46515f;
+.worldPanel08 {
+ width:min(96%,520px);max-height:90%;overflow:auto;
+ padding:17px;border:1px solid #668a9b;border-radius:10px;
+ background:linear-gradient(145deg,#15232d,#090d14);
 }
-.classCard.active {
-  border:2px solid #e0ad67;
-  background:linear-gradient(145deg,#47301f,#211923);
-  box-shadow:0 0 14px #b9783844;
+.worldPanel08 h2 {
+ margin:0;font-size:21px;letter-spacing:3px;
+ color:#d9eaf0;
 }
-.classCard small {
-  display:block;
-  color:#c9b7aa;
-  font-size:9px;
-  font-weight:normal;
+.worldIntro08 {
+ color:#aabac2;font-size:12px;line-height:1.5;
+}
+.regionCard08 {
+ display:block;width:100%;text-align:left;
+ margin:9px 0;padding:13px;
+ border:1px solid #456171;border-radius:7px;
+ background:#101b25;color:#edf5f7;
+}
+.regionCard08 strong {
+ display:block;font-size:14px;letter-spacing:2px;
+}
+.regionCard08 small {
+ display:block;margin-top:5px;color:#a9c2cd;
+ font-size:11px;letter-spacing:1px;
+}
+.regionCard08.active {
+ border:2px solid #d5a75c;
+ background:linear-gradient(120deg,#3a3023,#17222a);
+}
+#closeWorldMap08 {
+ width:100%;margin-top:10px;background:#263d4b;
+ border-color:#7095a6;
+}
+@media(max-height:650px){
+ .worldPanel08{max-height:96%;padding:12px}
+ .regionCard08{padding:9px;margin:6px 0}
 }
 `;
-document.head.appendChild(classStyle);
+document.head.appendChild(regionStyle08);
 
-const classSelector = document.createElement('div');
-classSelector.className = 'classSelect';
-classSelector.innerHTML = `
-  <button class="classCard" data-class="vanguard">
-    VANGUARD
-    <small>HEAVY ARMOR</small>
-    <small>+14 ARMOR</small>
+// Add the world map button to the existing mobile controls.
+const worldButton08 = document.createElement('button');
+worldButton08.className = 'action';
+worldButton08.id = 'worldButton08';
+worldButton08.textContent = 'WORLD MAP';
+worldButton08.style.background = '#23434a';
+worldButton08.style.borderColor = '#72b8b5';
+document.querySelector('.actions').insertBefore(
+  worldButton08,
+  document.querySelector('.actions').firstChild
+);
+
+// Build the world map panel.
+const worldMap08 = document.createElement('div');
+worldMap08.id = 'worldMap08';
+worldMap08.innerHTML = `
+ <div class="worldPanel08">
+  <h2>WORLD ATLAS</h2>
+  <p class="worldIntro08">
+   Choose a region to explore. Each world contains stronger
+   hostiles, unique terrain, and an elite guardian.
+  </p>
+  <button class="regionCard08" data-region="frontier">
+   <strong>THE FRONTIER</strong>
+   <small>LEVEL 1+ · THE ORIGINAL ALIEN WASTELAND</small>
   </button>
-  <button class="classCard active" data-class="ranger">
-    RANGER
-    <small>PRECISION</small>
-    <small>+18% WEAPON DAMAGE</small>
+  <button class="regionCard08" data-region="ashen">
+   <strong>ASHEN WILDS</strong>
+   <small>LEVEL 5+ · VOLCANIC ROCK AND LAVA FIELDS</small>
   </button>
-  <button class="classCard" data-class="technomancer">
-    TECHNOMANCER
-    <small>ENERGY MASTER</small>
-    <small>+30% NOVA DAMAGE</small>
+  <button class="regionCard08" data-region="frost">
+   <strong>FROSTFALL EXPANSE</strong>
+   <small>LEVEL 8+ · FROZEN RUINS AND ICE SPIRES</small>
   </button>
+  <button class="regionCard08" data-region="verdant">
+   <strong>VERDANT REACH</strong>
+   <small>LEVEL 12+ · ALIEN FORESTS AND GLOWING FLORA</small>
+  </button>
+  <button id="closeWorldMap08">RETURN TO ADVENTURE</button>
+ </div>
 `;
+document.body.appendChild(worldMap08);
 
-document.querySelector('.subtitle').after(classSelector);
-
-function selectEclipseClass(name) {
-  if (!['vanguard','ranger','technomancer'].includes(name)) return;
-
-  activeClass = name;
-
-  document.querySelectorAll('.classCard').forEach(card => {
-    card.classList.toggle('active', card.dataset.class === name);
-  });
-
-  const saved = localStorage.getItem(CLASS_SAVE_KEY);
-
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      data.activeClass = name;
-      localStorage.setItem(CLASS_SAVE_KEY, JSON.stringify(data));
-    } catch (err) {}
-  }
-
-  if (started) {
-    recalculateStats();
-    updateHUD();
-    saveGame();
-  }
+function closeWorldMap08() {
+  worldMap08.style.display = 'none';
+  inventoryOpen = false;
 }
 
-document.querySelectorAll('.classCard').forEach(card => {
-  card.addEventListener('click', () => {
-    selectEclipseClass(card.dataset.class);
+function openWorldMap08() {
+  if (!started) return;
+  if (dungeon) {
+    showMessage('RETURN TO THE FRONTIER BEFORE TRAVEL', 2);
+    return;
+  }
+
+  inventoryOpen = true;
+  fireHeld = false;
+  worldMap08.style.display = 'flex';
+
+  document.querySelectorAll('.regionCard08').forEach(card => {
+    card.classList.toggle(
+      'active',
+      card.dataset.region === currentRegion08
+    );
   });
+}
+
+worldButton08.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  openWorldMap08();
 });
 
-// Restore the selected class from an existing adventure.
-try {
-  const saved = JSON.parse(localStorage.getItem(CLASS_SAVE_KEY));
-  if (saved && ['vanguard','ranger','technomancer'].includes(saved.activeClass)) {
-    activeClass = saved.activeClass;
+document.getElementById('closeWorldMap08').addEventListener(
+  'click',
+  closeWorldMap08
+);
+
+function clearRegionProps08() {
+  for (const prop of regionProps08) scene.remove(prop);
+  regionProps08 = [];
+}
+
+function addRegionProp08(mesh) {
+  regionProps08.push(mesh);
+  return mesh;
+}
+
+function buildRegionEnvironment08(regionId) {
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: regions08[regionId].enemy,
+    roughness: 0.9
+  });
+
+  if (regionId === 'ashen') {
+    const lavaMat = new THREE.MeshBasicMaterial({
+      color: 0xff5728
+    });
+
+    for (let i = 0; i < 13; i++) {
+      const x = (Math.random() - 0.5) * 90;
+      const z = (Math.random() - 0.5) * 90;
+      if (Math.hypot(x, z) < 9) continue;
+
+      const rock = addRegionProp08(makeMesh(
+        new THREE.DodecahedronGeometry(1.4 + Math.random() * 2, 0),
+        rockMat, x, 1.2, z
+      ));
+      rock.scale.y = 1.5 + Math.random() * 2;
+    }
+
+    for (let i = 0; i < 9; i++) {
+      const x = (Math.random() - 0.5) * 75;
+      const z = (Math.random() - 0.5) * 75;
+      if (Math.hypot(x, z) < 8) continue;
+
+      const crack = addRegionProp08(makeMesh(
+        new THREE.BoxGeometry(4 + Math.random() * 5, .035, .18),
+        lavaMat, x, -.29, z
+      ));
+      crack.rotation.y = Math.random() * Math.PI;
+    }
   }
-} catch (err) {}
 
-selectEclipseClass(activeClass);
+  if (regionId === 'frost') {
+    const iceMat = new THREE.MeshStandardMaterial({
+      color: 0x70c9e8,
+      emissive: 0x164b70,
+      emissiveIntensity: .65,
+      metalness: .25,
+      roughness: .22
+    });
 
-// Add the class name to the gameplay HUD.
-const classHud = document.createElement('div');
-classHud.className = 'hudLine';
-classHud.innerHTML = '<span>CLASS</span><span id="classNameHud">RANGER</span>';
-document.querySelector('.hudPanel').children[0].after(classHud);
+    for (let i = 0; i < 18; i++) {
+      const x = (Math.random() - 0.5) * 95;
+      const z = (Math.random() - 0.5) * 95;
+      if (Math.hypot(x, z) < 9) continue;
 
-// Preserve the existing save system while adding class data.
-const originalSaveGame07 = saveGame;
+      const ice = addRegionProp08(makeMesh(
+        new THREE.ConeGeometry(.8 + Math.random() * 1.5, 4 + Math.random() * 7, 5),
+        iceMat, x, 2, z
+      ));
+      ice.rotation.z = (Math.random() - .5) * .3;
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const crystal = addRegionProp08(makeMesh(
+        new THREE.OctahedronGeometry(.65),
+        iceMat,
+        (Math.random() - .5) * 65,
+        .7,
+        (Math.random() - .5) * 65
+      ));
+      crystal.userData.dungeonGlow = true;
+    }
+  }
+
+  if (regionId === 'verdant') {
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x493a2a
+    });
+    const leafMat = new THREE.MeshStandardMaterial({
+      color: 0x286b39,
+      emissive: 0x0b3819,
+      emissiveIntensity: .8
+    });
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0x69ff9b
+    });
+
+    for (let i = 0; i < 16; i++) {
+      const x = (Math.random() - .5) * 100;
+      const z = (Math.random() - .5) * 100;
+      if (Math.hypot(x, z) < 10) continue;
+
+      addRegionProp08(makeMesh(
+        new THREE.CylinderGeometry(.35, .7, 5, 7),
+        trunkMat, x, 2.5, z
+      ));
+
+      const canopy = addRegionProp08(makeMesh(
+        new THREE.DodecahedronGeometry(2.1, 1),
+        leafMat, x, 5.4, z
+      ));
+      canopy.scale.set(1.2, 1.1, 1.2);
+    }
+
+    for (let i = 0; i < 12; i++) {
+      const plant = addRegionProp08(makeMesh(
+        new THREE.OctahedronGeometry(.45),
+        glowMat,
+        (Math.random() - .5) * 70,
+        .65,
+        (Math.random() - .5) * 70
+      ));
+      plant.userData.dungeonGlow = true;
+    }
+  }
+}
+
+function travelToRegion08(regionId, silent = false) {
+  if (!regions08[regionId] || !started || !scene || !player) return;
+
+  if (dungeon) {
+    showMessage('RETURN TO THE FRONTIER BEFORE TRAVEL', 2);
+    return;
+  }
+
+  currentRegion08 = regionId;
+  const config = regions08[regionId];
+
+  // Clear enemies, boss, projectiles, pickups and old portals.
+  for (const e of enemies) scene.remove(e);
+  enemies.length = 0;
+
+  for (const p of projectiles) scene.remove(p);
+  projectiles.length = 0;
+
+  for (const c of crystals) scene.remove(c);
+  crystals.length = 0;
+
+  for (const fx of effects) scene.remove(fx.mesh);
+  effects.length = 0;
+
+  if (boss) scene.remove(boss);
+  boss = null;
+  document.getElementById('bossBar').style.display = 'none';
+
+  if (portal) scene.remove(portal.mesh);
+  portal = null;
+  document.getElementById('portalButton').style.display = 'none';
+
+  clearDungeonProps();
+  clearRegionProps08();
+
+  // Change the atmosphere and terrain.
+  scene.background = new THREE.Color(config.sky);
+  scene.fog = new THREE.FogExp2(config.fog, config.density);
+
+  worldFloor.material = new THREE.MeshStandardMaterial({
+    color: config.ground,
+    roughness: .95
+  });
+
+  mats.enemy.color.setHex(config.enemy);
+
+  buildRegionEnvironment08(regionId);
+
+  // Place the explorer at the center of the new region.
+  player.position.set(0, 0, 0);
+  cameraYaw = 0;
+  cameraPitch = .12;
+
+  // Spawn local hostiles.
+  for (let i = 0; i < 4; i++) {
+    const angle = Math.PI * 2 * i / 4;
+    createEnemy(
+      Math.cos(angle) * 19,
+      Math.sin(angle) * 19
+    );
+
+    const enemy = enemies[enemies.length - 1];
+    enemy.userData.hp = config.hp;
+    enemy.userData.maxHp = config.hp;
+    enemy.userData.speed = config.speed;
+  }
+
+  // Every region has an elite guardian.
+  const eliteAngle = Math.PI * .25;
+  createEnemy(
+    Math.cos(eliteAngle) * 29,
+    Math.sin(eliteAngle) * 29
+  );
+
+  const elite = enemies[enemies.length - 1];
+  elite.userData.hp = 420 + level * 12;
+  elite.userData.maxHp = elite.userData.hp;
+  elite.userData.speed = config.speed * .8;
+  elite.userData.elite = true;
+  elite.userData.eliteRewarded = false;
+  elite.userData.attack = .7;
+  elite.scale.setScalar(1.65);
+
+  const eliteMat = new THREE.MeshStandardMaterial({
+    color: 0xd5a34b,
+    emissive: 0x713b13,
+    emissiveIntensity: 1.1,
+    metalness: .35,
+    roughness: .35
+  });
+
+  elite.traverse(part => {
+    if (part.isMesh) part.material = eliteMat;
+  });
+
+  const crown = makeMesh(
+    new THREE.OctahedronGeometry(.5),
+    new THREE.MeshBasicMaterial({ color: 0xffd36a }),
+    0, 3.4, 0, elite
+  );
+
+  for (let i = 0; i < 7; i++) {
+    spawnCrystal(
+      (Math.random() - .5) * 55,
+      (Math.random() - .5) * 55
+    );
+  }
+
+  updateHUD();
+
+  if (!silent) {
+    closeWorldMap08();
+    showMessage(config.name + ' — NEW REGION DISCOVERED', 3);
+  }
+  saveGame();
+}
+
+// Region map selection.
+worldMap08.addEventListener('click', e => {
+  const card = e.target.closest('[data-region]');
+  if (!card) return;
+  travelToRegion08(card.dataset.region);
+});
+
+// Elite guardian reward.
+const originalDamageEnemyBase08 = damageEnemyBase;
+
+damageEnemyBase = function(enemy, amount) {
+  const wasElite = !!enemy?.userData?.elite;
+  const wasAlive = enemies.includes(enemy);
+
+  originalDamageEnemyBase08(enemy, amount);
+
+  if (
+    wasElite &&
+    wasAlive &&
+    !enemies.includes(enemy) &&
+    !enemy.userData.eliteRewarded
+  ) {
+    enemy.userData.eliteRewarded = true;
+    xp += 180;
+    shards += 8;
+    checkLevel();
+    createLoot(enemy.position.x + 2, enemy.position.z);
+    saveGame();
+    showMessage('ELITE GUARDIAN SLAIN — RARE REWARDS', 3);
+  }
+};
+
+// Add region name to the existing HUD.
+const regionHud08 = document.createElement('div');
+regionHud08.className = 'hudLine';
+regionHud08.innerHTML =
+  '<span>REGION</span><span id="regionName08">THE FRONTIER</span>';
+document.querySelector('.hudPanel').appendChild(regionHud08);
+
+const originalUpdateHUD08 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD08();
+
+  const label = document.getElementById('regionName08');
+  if (label) label.textContent = regions08[currentRegion08].name;
+
+  const eliteAlive = enemies.some(e => e.userData.elite);
+  $('enemyText').textContent =
+    enemies.length + (boss ? ' + BOSS' : '') +
+    (eliteAlive ? ' · ELITE' : '');
+};
+
+// Save the selected region without changing the existing save format.
+const originalSaveGame08 = saveGame;
 
 saveGame = function() {
-  originalSaveGame07();
+  originalSaveGame08();
 
   try {
-    const saved = localStorage.getItem(CLASS_SAVE_KEY);
-    if (!saved) return;
-
-    const data = JSON.parse(saved);
-    data.activeClass = activeClass;
-    localStorage.setItem(CLASS_SAVE_KEY, JSON.stringify(data));
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    data.region08 = currentRegion08;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch (err) {}
 };
 
-// Restore class before the original game loads equipment and stats.
-const originalLoadGame07 = loadGame;
+// Restore the region when continuing an adventure.
+const originalLoadGame08 = loadGame;
 
 loadGame = function() {
+  const result = originalLoadGame08();
+
   try {
-    const saved = JSON.parse(localStorage.getItem(CLASS_SAVE_KEY));
-    if (saved && ['vanguard','ranger','technomancer'].includes(saved.activeClass)) {
-      activeClass = saved.activeClass;
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (regions08[data.region08]) {
+        currentRegion08 = data.region08;
+      }
     }
   } catch (err) {}
 
-  const result = originalLoadGame07();
-
-  selectEclipseClass(activeClass);
   return result;
 };
 
-// Apply class bonuses whenever equipment stats are recalculated.
-const originalRecalculateStats07 = recalculateStats;
+// Apply the saved region after the original game has started.
+const originalStartGame08 = startGame;
 
-recalculateStats = function() {
-  originalRecalculateStats07();
+startGame = function(newGame = false) {
+  if (newGame) currentRegion08 = 'frontier';
 
-  if (activeClass === 'vanguard') {
-    equipmentStats.armor += 14;
-  }
+  originalStartGame08(newGame);
 
-  if (activeClass === 'ranger') {
-    equipmentStats.damage = Math.round(equipmentStats.damage * 1.18);
+  if (started && scene && player) {
+    travelToRegion08(currentRegion08, true);
   }
 };
 
-// Ranger weapon damage is included in the existing shooting system.
-const originalShoot07 = shoot;
-
-shoot = function() {
-  originalShoot07();
-};
-
-// Technomancer gets stronger Nova damage.
-const originalDamageEnemy07 = damageEnemy;
-
-damageEnemy = function(enemy, amount) {
-  if (activeClass === 'technomancer' && novaBoostActive) {
-    amount *= 1.30;
-  }
-
-  originalDamageEnemy07(enemy, amount);
-};
-
-// Technomancer Nova cooldown is shorter.
-const originalNovaBase07 = novaBase;
-
-novaBase = function() {
-  const wasReady = novaCooldown <= 0;
-
-  originalNovaBase07();
-
-  if (wasReady && activeClass === 'technomancer' && novaCooldown > 0) {
-    novaCooldown = 4;
-  }
-};
-
-// Display class in HUD.
-const originalUpdateHUD07 = updateHUD;
-
-updateHUD = function() {
-  originalUpdateHUD07();
-
-  const label = document.getElementById('classNameHud');
-  if (label) label.textContent = activeClass.toUpperCase();
-};
-
-// Update version labels.
-document.title = 'ECLIPSE — Worlds Beyond 0.7';
+// Version label.
+document.title = 'ECLIPSE — Worlds Beyond 0.8';
 
 document.querySelectorAll('#titleScreen p').forEach(p => {
-  if (p.textContent.includes('SAVE SYSTEM')) {
-    p.textContent = 'CHARACTER CLASSES — UPDATE 0.7';
+  if (p.textContent.includes('UPDATE 0.7')) {
+    p.textContent = 'WORLD EXPANSION — UPDATE 0.8';
   }
 });
 
-console.log('ECLIPSE 0.7 CHARACTER CLASSES LOADED');
-
-</script>
-</body>
-</html>
+console.log('ECLIPSE 0.8 WORLD EXPANSION LOADED');
