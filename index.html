@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#08090d">
-<title>ECLIPSE — Worlds Beyond 0.5</title>
+<title>ECLIPSE — Worlds Beyond 0.6</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08090d;color:#eee;font-family:Arial,sans-serif;touch-action:none}
@@ -78,8 +78,9 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
   <h1>ECLIPSE</h1>
   <div class="subtitle">WORLDS BEYOND</div>
   <p class="intro">An unknown world. A dying signal. Something is hunting you in the darkness.<br><br>Survive the frontier. Discover what waits beyond the eclipse.</p>
-  <button id="enterButton">ENTER THE FRONTIER</button>
-  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — DUNGEON GATE 0.5</p>
+  <button id="enterButton">CONTINUE ADVENTURE</button>
+  <button id="newGameButton" style="display:block;margin:12px auto 0;min-width:230px;background:#20232b;border-color:#68717c">NEW GAME</button>
+  <p style="font-size:10px;color:#81777d;margin-top:25px;letter-spacing:2px">THE HUNTER — SAVE SYSTEM 0.6</p>
  </div>
 </div>
 
@@ -177,6 +178,40 @@ const mats={
 };
 
 function showMessage(t,d=1.5){$('message').textContent=t;messageTimer=d}
+const SAVE_KEY='eclipse_worlds_beyond_save_v06';
+function saveGame(){
+ if(!started||!player)return;
+ try{
+  const data={version:6,level,xp,shards,health,maxHealth,skillPoints,skills:{...skills},
+   equipped:{...equipped},bag:bag.map(item=>({...item})),itemId,wave,
+   position:{x:player.position.x,z:player.position.z},cameraYaw,cameraPitch};
+  localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+ }catch(err){console.warn('ECLIPSE save unavailable',err)}
+}
+function loadGame(){
+ try{
+  const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;
+  const d=JSON.parse(raw);if(!d||d.version!==6)return false;
+  level=Math.max(1,Number(d.level)||1);xp=Math.max(0,Number(d.xp)||0);
+  shards=Math.max(0,Number(d.shards)||0);maxHealth=Math.max(100,Number(d.maxHealth)||100);
+  health=THREE.MathUtils.clamp(Number(d.health)||maxHealth,1,maxHealth);
+  skillPoints=Math.max(0,Number(d.skillPoints)||0);
+  skills={power:0,vitality:0,nova:0,armor:0,...d.skills};
+  for(const k of Object.keys(skills))skills[k]=THREE.MathUtils.clamp(Number(skills[k])||0,0,5);
+  equipped={Weapon:null,Helmet:null,Chest:null,Gloves:null,Boots:null,Accessory:null,...d.equipped};
+  bag=Array.isArray(d.bag)?d.bag:[];itemId=Math.max(0,Number(d.itemId)||0);
+  wave=Math.max(1,Number(d.wave)||1);
+  if(d.position&&Number.isFinite(d.position.x)&&Number.isFinite(d.position.z))
+   player.position.set(THREE.MathUtils.clamp(d.position.x,-70,70),0,THREE.MathUtils.clamp(d.position.z,-70,70));
+  if(Number.isFinite(d.cameraYaw))cameraYaw=d.cameraYaw;
+  if(Number.isFinite(d.cameraPitch))cameraPitch=THREE.MathUtils.clamp(d.cameraPitch,-.25,.65);
+  recalculateStats();return true;
+ }catch(err){return false}
+}
+function updateContinueLabel(){
+ let hasSave=false;try{hasSave=!!localStorage.getItem(SAVE_KEY)}catch(err){}
+ $('enterButton').textContent=hasSave?'CONTINUE ADVENTURE':'ENTER THE FRONTIER';
+}
 function makeMesh(g,m,x,y,z,parent=scene){
  const o=new THREE.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o;
 }
@@ -271,8 +306,8 @@ function recalculateStats(){
 }
 function collectCrystal(c){
  scene.remove(c);crystals=crystals.filter(a=>a!==c);
- if(c.userData.item){bag.push(c.userData.item);showMessage(c.userData.item.rarity.toUpperCase()+' '+c.userData.item.type+' FOUND!',1.5)}
- else{shards++;showMessage('ENERGY SHARD +1',.7)}
+ if(c.userData.item){bag.push(c.userData.item);saveGame();showMessage(c.userData.item.rarity.toUpperCase()+' '+c.userData.item.type+' FOUND!',1.5)}
+ else{shards++;saveGame();showMessage('ENERGY SHARD +1',.7)}
 }
 function damageEnemyBase(e,amount){
  if(!enemies.includes(e))return;
@@ -282,13 +317,13 @@ function damageEnemyBase(e,amount){
   scene.remove(e);enemies=enemies.filter(a=>a!==e);xp+=35;
   if(Math.random()<.75)createLoot(e.position.x,e.position.z);
   if(Math.random()<.65)spawnCrystal(e.position.x+1,e.position.z);
-  checkLevel();showMessage('HOSTILE ELIMINATED',.8);
+  checkLevel();saveGame();showMessage('HOSTILE ELIMINATED',.8);
  }
 }
 function checkLevel(){
  while(xp>=level*100){
   xp-=level*100;level++;maxHealth+=10;health=Math.min(maxHealth,health+30);skillPoints++;
-  showMessage('LEVEL UP — LEVEL '+level+' · SKILL POINT +1',2);
+  showMessage('LEVEL UP — LEVEL '+level+' · SKILL POINT +1',2);saveGame();
  }
 }
 function getAimDirection(){return new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)).normalize()}
@@ -394,7 +429,7 @@ function renderInventory(){
  for(const type of gearTypes){
   const item=equipped[type],el=document.createElement('div');el.className='slot';
   el.innerHTML='<small>'+type.toUpperCase()+'</small><span class="'+(item?item.rarity:'common')+'">'+(item?item.name:'Empty')+'</span>';
-  if(item){const b=document.createElement('button');b.textContent='REMOVE';b.onclick=()=>{bag.push(item);equipped[type]=null;renderInventory()};el.appendChild(b)}
+  if(item){const b=document.createElement('button');b.textContent='REMOVE';b.onclick=()=>{bag.push(item);equipped[type]=null;renderInventory();saveGame()};el.appendChild(b)}
   slots.appendChild(el);
  }
  const bagEl=$('bag');bagEl.innerHTML='';
@@ -406,7 +441,7 @@ function renderInventory(){
   const b=document.createElement('button');b.textContent='EQUIP';
   b.onclick=()=>{
    const old=equipped[item.type];equipped[item.type]=item;bag=bag.filter(a=>a.id!==item.id);
-   if(old)bag.push(old);recalculateStats();renderInventory();showMessage(item.name+' EQUIPPED',1);
+   if(old)bag.push(old);recalculateStats();renderInventory();saveGame();showMessage(item.name+' EQUIPPED',1);
   };
   el.append(name,b,desc);bagEl.appendChild(el);
  }
@@ -482,7 +517,7 @@ function damageEnemy(e,amount){
   e.userData.hp-=amount;$('bossFill').style.width=Math.max(0,e.userData.hp/e.userData.maxHp*100)+'%';
   if(e.userData.hp<=0){
    const x=e.position.x,z=e.position.z;scene.remove(e);boss=null;$('bossBar').style.display='none';
-   xp+=300;shards+=12;skillPoints+=2;checkLevel();
+   xp+=300;shards+=12;skillPoints+=2;checkLevel();saveGame();
    createLoot(x,z);createLoot(x+2,z+1);
    createPortal(x+4,z+3,'ENTER THE ABYSSAL DUNGEON');
    showMessage('WARDEN SLAIN — A DUNGEON GATE HAS OPENED',4);
@@ -620,7 +655,7 @@ function renderSkills(){
   const p=document.createElement('p');p.textContent=desc;
   const rank=document.createElement('div');rank.style.color='#9bb9c8';rank.textContent='RANK '+skills[key]+' / 5';
   const btn=document.createElement('button');btn.textContent='UNLOCK / UPGRADE';btn.disabled=skillPoints<=0||skills[key]>=5;
-  btn.onclick=()=>{if(skillPoints<=0||skills[key]>=5)return;skillPoints--;skills[key]++;if(key==='vitality'){maxHealth+=15;health+=15}renderSkills();updateHUD();showMessage(name+' UPGRADED',1)};
+  btn.onclick=()=>{if(skillPoints<=0||skills[key]>=5)return;skillPoints--;skills[key]++;if(key==='vitality'){maxHealth+=15;health+=15}renderSkills();updateHUD();saveGame();showMessage(name+' UPGRADED',1)};
   card.append(h,p,rank,btn);root.appendChild(card);
  }
 }
@@ -644,7 +679,7 @@ function animate(){
  }else $('portalButton').style.display='none';
  for(const p of dungeonProps)if(p.userData.dungeonGlow)p.rotation.y+=dt*.8;
  if(dungeon&&enemies.length===0&&!dungeonRewarded){
-  dungeonRewarded=true;xp+=200;shards+=8;skillPoints++;checkLevel();
+  dungeonRewarded=true;xp+=200;shards+=8;skillPoints++;checkLevel();saveGame();
   createLoot(player.position.x+2,player.position.z);
   showMessage('DUNGEON CLEARED — BONUS LOOT + 1 SKILL POINT',4);
  }
@@ -652,18 +687,34 @@ function animate(){
  if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0)$('message').textContent=''}
  renderer.render(scene,camera);
 }
-function startGame(){
+function startGame(newGame=false){
  if(started)return;
+ if(newGame){
+  try{localStorage.removeItem(SAVE_KEY)}catch(err){}
+  level=1;xp=0;shards=0;health=100;maxHealth=100;skillPoints=0;
+  skills={power:0,vitality:0,nova:0,armor:0};
+  equipped={Weapon:null,Helmet:null,Chest:null,Gloves:null,Boots:null,Accessory:null};
+  bag=[];itemId=0;wave=1;cameraYaw=0;cameraPitch=.12;
+ }
  started=true;$('titleScreen').style.display='none';
  $('hud').style.display='block';$('controls').style.display='flex';
  $('crosshair').style.display='block';$('help').style.display='block';$('lookHint').style.display='block';
- makeWorld();createPlayer();setupControls();
+ makeWorld();createPlayer();
+ const restored=loadGame();setupControls();
  for(let i=0;i<5;i++){const a=Math.PI*2*i/5;createEnemy(Math.cos(a)*18,Math.sin(a)*18)}
  for(let i=0;i<12;i++)spawnCrystal((Math.random()-.5)*65,(Math.random()-.5)*65);
- cameraYaw=0;cameraPitch=.12;camera.position.set(0,5,9);camera.lookAt(0,1,0);
+ camera.position.set(player.position.x,5,player.position.z+9);
+ camera.lookAt(player.position.x,1,player.position.z);
  animate();
+ if(restored)showMessage('ADVENTURE RESTORED — WELCOME BACK',2.5);
+ saveGame();
 }
-$('enterButton').addEventListener('click',startGame);
+$('enterButton').addEventListener('click',()=>startGame(false));
+$('newGameButton').addEventListener('click',()=>startGame(true));
+updateContinueLabel();
+window.addEventListener('beforeunload',saveGame);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame()});
+setInterval(()=>{if(started)saveGame()},5000);
 window.addEventListener('resize',()=>{
  if(!renderer||!camera)return;
  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
