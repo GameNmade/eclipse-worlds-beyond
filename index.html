@@ -1924,6 +1924,295 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.10 — LIVING THREATS LOADED');
 
+/* =========================================
+   ECLIPSE 0.11 — MOBILE HUD REDESIGN
+   ========================================= */
+
+const mobileStyle11 = document.createElement('style');
+
+mobileStyle11.textContent = `
+/* Bottom status display */
+#bottomStatus11 {
+  position:fixed;
+  z-index:9;
+  left:10px;
+  right:10px;
+  bottom:6px;
+  height:42px;
+  display:none;
+  grid-template-columns:1.2fr .75fr 1.2fr;
+  gap:6px;
+  pointer-events:none;
+}
+
+.statusCell11 {
+  min-width:0;
+  padding:5px 8px;
+  border:1px solid #52616b;
+  border-radius:6px;
+  background:#080c12eF;
+}
+
+.statusLabel11 {
+  display:flex;
+  justify-content:space-between;
+  gap:4px;
+  font-size:9px;
+  letter-spacing:1px;
+  color:#d5dce2;
+  margin-bottom:4px;
+}
+
+.statusTrack11 {
+  height:7px;
+  border-radius:8px;
+  overflow:hidden;
+  background:#252b33;
+}
+
+.statusFill11 {
+  width:100%;
+  height:100%;
+  transition:width .15s;
+}
+
+#bottomHealthFill11 {
+  background:linear-gradient(90deg,#8d202c,#f34c59);
+}
+
+#bottomXPFill11 {
+  background:linear-gradient(90deg,#9a6528,#f2c15d);
+}
+
+#bottomLevel11 {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  color:#f4d58a;
+  font-size:18px;
+  font-weight:bold;
+}
+
+/* Combat buttons in a compact central cluster */
+#controls {
+  bottom:58px;
+  padding:0 9px;
+  align-items:flex-end;
+}
+
+#stickArea {
+  width:112px;
+  height:112px;
+  flex-shrink:0;
+}
+
+#stick {
+  left:29px;
+  top:29px;
+}
+
+.actions {
+  display:grid;
+  grid-template-columns:repeat(3,68px);
+  grid-template-rows:repeat(2,40px);
+  gap:5px;
+  align-items:stretch;
+  justify-items:stretch;
+  width:auto;
+}
+
+.action {
+  width:68px;
+  height:40px;
+  font-size:9px;
+  padding:3px;
+  border-radius:9px;
+}
+
+/* Primary combat row */
+#fire { grid-column:1; grid-row:1; }
+#nova { grid-column:2; grid-row:1; }
+#dodge { grid-column:3; grid-row:1; }
+
+/* Utility row */
+#skillsButton { grid-column:1; grid-row:2; }
+#inventoryButton { grid-column:2; grid-row:2; }
+#portalButton { grid-column:3; grid-row:2; }
+
+/* Currency in inventory */
+.currencyDisplay11 {
+  margin:10px 0;
+  padding:12px;
+  border:1px solid #94713c;
+  border-radius:7px;
+  background:linear-gradient(100deg,#292113,#15130e);
+  color:#e8c77d;
+  font-size:13px;
+  letter-spacing:1px;
+  display:flex;
+  justify-content:space-between;
+}
+
+.currencyDisplay11 strong {
+  font-size:17px;
+  color:#ffe2a0;
+}
+
+/* Compact upper HUD */
+#hud .hudPanel {
+  width:155px;
+  padding:7px 9px;
+}
+
+#hud .hudLine {
+  font-size:10px;
+  margin-bottom:5px;
+}
+
+@media(max-width:360px) {
+  #stickArea {
+    width:96px;
+    height:96px;
+  }
+
+  #stick {
+    left:21px;
+    top:21px;
+  }
+
+  .actions {
+    grid-template-columns:repeat(3,62px);
+    grid-template-rows:repeat(2,38px);
+    gap:4px;
+  }
+
+  .action {
+    width:62px;
+    height:38px;
+    font-size:8px;
+  }
+
+  #controls {
+    padding:0 6px;
+  }
+
+  #bottomStatus11 {
+    left:6px;
+    right:6px;
+  }
+}
+`;
+
+document.head.appendChild(mobileStyle11);
+
+// Hide the old duplicated health, XP and currency rows.
+document.getElementById('healthText').parentElement.style.display = 'none';
+document.getElementById('healthFill').parentElement.style.display = 'none';
+document.getElementById('xpText').parentElement.style.display = 'none';
+document.getElementById('xpFill').parentElement.style.display = 'none';
+document.getElementById('shardText').parentElement.style.display = 'none';
+document.getElementById('levelText').style.display = 'none';
+
+// Build the new bottom status system.
+const bottomStatus11 = document.createElement('div');
+bottomStatus11.id = 'bottomStatus11';
+
+bottomStatus11.innerHTML = `
+  <div class="statusCell11">
+    <div class="statusLabel11">
+      <span>VITALITY</span>
+      <span id="bottomHealthText11">100 / 100</span>
+    </div>
+    <div class="statusTrack11">
+      <div class="statusFill11" id="bottomHealthFill11"></div>
+    </div>
+  </div>
+
+  <div class="statusCell11">
+    <div id="bottomLevel11">LV 1</div>
+  </div>
+
+  <div class="statusCell11">
+    <div class="statusLabel11">
+      <span>EXPERIENCE</span>
+      <span id="bottomXPText11">0%</span>
+    </div>
+    <div class="statusTrack11">
+      <div class="statusFill11" id="bottomXPFill11"></div>
+    </div>
+  </div>
+`;
+
+document.body.appendChild(bottomStatus11);
+
+// Add currency display to the inventory.
+const currencyDisplay11 = document.createElement('div');
+currencyDisplay11.className = 'currencyDisplay11';
+currencyDisplay11.innerHTML =
+  '<span>ENERGY SHARDS</span><strong id="inventoryShards11">0</strong>';
+
+const inventoryStats11 = document.querySelector('#inventory .stats');
+inventoryStats11.insertAdjacentElement('afterend', currencyDisplay11);
+
+// Refresh the redesigned HUD using the existing game values.
+const originalUpdateHUD11 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD11();
+
+  const healthPercent = Math.max(
+    0,
+    Math.min(100, health / maxHealth * 100)
+  );
+
+  const xpPercent = Math.max(
+    0,
+    Math.min(100, xp / (level * 100) * 100)
+  );
+
+  document.getElementById('bottomHealthText11').textContent =
+    Math.ceil(health) + ' / ' + maxHealth;
+
+  document.getElementById('bottomHealthFill11').style.width =
+    healthPercent + '%';
+
+  document.getElementById('bottomLevel11').textContent =
+    'LV ' + level;
+
+  document.getElementById('bottomXPText11').textContent =
+    Math.floor(xpPercent) + '%';
+
+  document.getElementById('bottomXPFill11').style.width =
+    xpPercent + '%';
+
+  document.getElementById('inventoryShards11').textContent =
+    shards;
+};
+
+// Show the bottom HUD while playing.
+const originalStartGame11 = startGame;
+
+startGame = function(newGame = false) {
+  originalStartGame11(newGame);
+
+  if (started) {
+    bottomStatus11.style.display = 'grid';
+  }
+};
+
+// Update the inventory currency when opened.
+const originalOpenInventory11 = openInventory;
+
+openInventory = function() {
+  originalOpenInventory11();
+
+  document.getElementById('inventoryShards11').textContent =
+    shards;
+};
+
+console.log('ECLIPSE 0.11 — MOBILE HUD REDESIGN LOADED');
+
 </script>
 </body>
 </html>
