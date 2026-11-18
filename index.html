@@ -3945,6 +3945,224 @@ document.title = 'ECLIPSE — Worlds Beyond 0.19';
 
 console.log('ECLIPSE 0.19 — HUD REFINEMENT LOADED');
 
+/* =========================================
+   ECLIPSE 0.19 — EXPLORATION & DISCOVERY
+   ========================================= */
+
+let discoveredSites19 = [];
+
+const discoveryLocations19 = {
+  frontier: [
+    {x:-28,z:-25,name:'THE FORGOTTEN RELAY'},
+    {x:30,z:25,name:'ANCIENT WATCHTOWER'}
+  ],
+  ashen: [
+    {x:-30,z:26,name:'THE EMBER SHRINE'},
+    {x:29,z:-27,name:'BURNT EXPEDITION'}
+  ],
+  frost: [
+    {x:-29,z:-26,name:'THE FROST ALTAR'},
+    {x:30,z:27,name:'CRYSTAL SANCTUM'}
+  ],
+  verdant: [
+    {x:-30,z:25,name:'THE OVERGROWN TEMPLE'},
+    {x:28,z:-28,name:'ANCIENT ROOT COMPLEX'}
+  ]
+};
+
+const discoveryObjects19 = [];
+
+const discoveryMaterials19 = {
+  base: new THREE.MeshStandardMaterial({
+    color:0x303944,
+    metalness:.65,
+    roughness:.35
+  }),
+  glow: new THREE.MeshBasicMaterial({
+    color:0x54eaff
+  }),
+  ring: new THREE.MeshBasicMaterial({
+    color:0x40cce8,
+    transparent:true,
+    opacity:.75
+  })
+};
+
+function clearDiscoveries19() {
+  for (const item of discoveryObjects19) {
+    scene.remove(item.group);
+  }
+  discoveryObjects19.length = 0;
+}
+
+function buildDiscoveries19(region) {
+  clearDiscoveries19();
+
+  const locations = discoveryLocations19[region] || [];
+
+  locations.forEach((site,index) => {
+    const id = region+'_'+index;
+
+    if (discoveredSites19.includes(id)) return;
+
+    const group = new THREE.Group();
+    group.position.set(site.x,0,site.z);
+
+    makeMesh(
+      new THREE.CylinderGeometry(1.5,1.9,.65,8),
+      discoveryMaterials19.base,
+      0,.3,0,group
+    );
+
+    makeMesh(
+      new THREE.CylinderGeometry(.48,.8,2.5,6),
+      discoveryMaterials19.base,
+      0,1.7,0,group
+    );
+
+    const crystal = makeMesh(
+      new THREE.OctahedronGeometry(.75),
+      discoveryMaterials19.glow,
+      0,3.3,0,group
+    );
+
+    const ring = makeMesh(
+      new THREE.TorusGeometry(1.8,.07,8,32),
+      discoveryMaterials19.ring,
+      0,.15,0,group
+    );
+
+    ring.rotation.x = Math.PI/2;
+
+    scene.add(group);
+
+    discoveryObjects19.push({
+      id,
+      name:site.name,
+      group,
+      crystal,
+      ring,
+      found:false
+    });
+  });
+}
+
+function updateDiscoveries19(dt) {
+  if (!started || !player || dungeon || inventoryOpen) return;
+
+  for (const site of discoveryObjects19) {
+    if (site.found) continue;
+
+    site.crystal.rotation.y += dt*1.2;
+    site.crystal.position.y =
+      3.3 + Math.sin(clock.elapsedTime*2)*.25;
+
+    site.ring.rotation.z += dt*.5;
+
+    const distance = Math.hypot(
+      player.position.x-site.group.position.x,
+      player.position.z-site.group.position.z
+    );
+
+    if (distance < 4.5) {
+      site.found = true;
+      discoveredSites19.push(site.id);
+
+      xp += 120;
+      shards += 10;
+      checkLevel();
+
+      let bonus = '';
+
+      if (Math.random() < .25) {
+        createLoot(
+          player.position.x+2,
+          player.position.z+2
+        );
+        bonus = ' — BONUS EQUIPMENT FOUND!';
+      }
+
+      showMessage(
+        'LOCATION DISCOVERED: '+site.name+
+        ' · +120 XP · +10 SHARDS'+bonus,
+        4
+      );
+
+      scene.remove(site.group);
+
+      saveGame();
+    }
+  }
+}
+
+// Rebuild discovery sites whenever a region is entered.
+const originalTravelRegion19 = travelToRegion08;
+
+travelToRegion08 = function(regionId,silent=false) {
+  originalTravelRegion19(regionId,silent);
+
+  if (started && scene && !dungeon) {
+    buildDiscoveries19(regionId);
+  }
+};
+
+// Save discovery progress.
+const originalSaveGame19 = saveGame;
+
+saveGame = function() {
+  originalSaveGame19();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+    data.discoveredSites19 = discoveredSites19;
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  } catch(err) {}
+};
+
+// Restore discovery progress.
+const originalLoadGame19 = loadGame;
+
+loadGame = function() {
+  const result = originalLoadGame19();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      discoveredSites19 =
+        Array.isArray(data.discoveredSites19)
+          ? data.discoveredSites19
+          : [];
+    }
+  } catch(err) {}
+
+  return result;
+};
+
+// Reset discovery progress for a new adventure.
+const originalStartGame19 = startGame;
+
+startGame = function(newGame=false) {
+  if (newGame) discoveredSites19 = [];
+
+  originalStartGame19(newGame);
+};
+
+// Connect discovery updates to the game loop.
+const originalUpdateDiscoveries19 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateDiscoveries19();
+  updateDiscoveries19(clock.getDelta());
+};
+
+document.title = 'ECLIPSE — Worlds Beyond 0.19';
+
+console.log('ECLIPSE 0.19 — EXPLORATION & DISCOVERY LOADED');
+
 </script>
 </body>
 </html>
