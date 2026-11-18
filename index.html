@@ -3337,11 +3337,33 @@ sellBalance16.className = 'sellBalance16';
 const sellAll16 = document.createElement('button');
 sellAll16.textContent = 'SELL ENTIRE BAG';
 
-sellAll16.onclick = () => {
+sellAll16.type = 'button';
+
+sellAll16.onclick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
   if (!bag.length) {
     showMessage('BACKPACK IS EMPTY',1);
     return;
   }
+
+  const count = bag.length;
+  const total = bag.reduce(
+    (sum,item) => sum + getSellPrice16(item),0
+  );
+
+  bag = [];
+  shards += total;
+
+  saveGame();
+  renderInventory();
+
+  showMessage(
+    count+' ITEMS SOLD — +'+total+' SHARDS',
+    2.5
+  );
+};
 
   const total = bag.reduce(
     (sum,item) => sum + getSellPrice16(item),0
