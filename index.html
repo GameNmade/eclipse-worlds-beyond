@@ -2614,6 +2614,321 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.13 — COMBAT FEEDBACK LOADED');
 
+/* =========================================
+   ECLIPSE 0.14 — DIABLO LOOT & EQUIPMENT
+   ========================================= */
+
+const lootStyle14 = document.createElement('style');
+lootStyle14.textContent = `
+.lootNotice14 {
+  position:fixed;
+  top:17%;
+  left:50%;
+  transform:translate(-50%,-12px);
+  z-index:30;
+  pointer-events:none;
+  padding:10px 17px;
+  border:1px solid currentColor;
+  border-radius:7px;
+  background:rgba(9,10,17,.94);
+  text-align:center;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:1.4px;
+  box-shadow:0 0 20px currentColor;
+  opacity:0;
+  transition:opacity .2s,transform .2s;
+}
+.lootNotice14.show14 {
+  opacity:1;
+  transform:translate(-50%,0);
+}
+.lootCompare14 {
+  margin-top:7px;
+  padding:6px 8px;
+  border-radius:5px;
+  background:rgba(0,0,0,.35);
+  font-size:11px;
+  line-height:1.5;
+}
+.lootCompare14 strong {
+  display:block;
+  margin-bottom:2px;
+  letter-spacing:.5px;
+}
+.legendaryNotice14 {
+  color:#ffbd55 !important;
+  border-color:#ffbd55 !important;
+  box-shadow:0 0 28px #ff9d32 !important;
+}
+.lootBeam14 {
+  pointer-events:none;
+}
+`;
+
+document.head.appendChild(lootStyle14);
+
+const lootMultipliers14 = {
+  common:1,
+  uncommon:1.10,
+  rare:1.22,
+  epic:1.38,
+  legendary:1.58
+};
+
+let lootNotice14 = document.createElement('div');
+lootNotice14.className = 'lootNotice14';
+document.body.appendChild(lootNotice14);
+
+let lootNoticeTimer14 = null;
+
+function showLootNotice14(item, collected) {
+  const rarity = item.rarity || 'common';
+  lootNotice14.className = 'lootNotice14' +
+    (rarity === 'legendary' ? ' legendaryNotice14' : '');
+
+  lootNotice14.style.color =
+    '#' + rarityColors[rarity].toString(16).padStart(6,'0');
+
+  lootNotice14.innerHTML = '';
+  const heading = document.createElement('div');
+  heading.textContent = collected ? 'ITEM ACQUIRED' : 'NEW LOOT';
+  const name = document.createElement('div');
+  name.style.marginTop = '4px';
+  name.textContent = item.name;
+  const tier = document.createElement('div');
+  tier.style.marginTop = '3px';
+  tier.style.fontSize = '10px';
+  tier.textContent = rarity.toUpperCase() + ' ' + item.type.toUpperCase();
+
+  lootNotice14.append(heading,name,tier);
+  lootNotice14.classList.add('show14');
+
+  if (lootNoticeTimer14) clearTimeout(lootNoticeTimer14);
+  lootNoticeTimer14 = setTimeout(() => {
+    lootNotice14.classList.remove('show14');
+  }, 2200);
+}
+
+// Add colored loot beams to newly created equipment.
+const originalCreateLoot14 = createLoot;
+
+createLoot = function(x,z) {
+  originalCreateLoot14(x,z);
+
+  const gem = crystals[crystals.length - 1];
+  if (!gem || !gem.userData.item) return;
+
+  const item = gem.userData.item;
+  const rarity = item.rarity || 'common';
+  const color = rarityColors[rarity] || 0xffffff;
+
+  gem.userData.phase = Math.random() * 6;
+
+  const beamHeight = rarity === 'legendary' ? 5.5 :
+    rarity === 'epic' ? 4.5 : 3.5;
+
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      rarity === 'legendary' ? .10 : .055,
+      rarity === 'legendary' ? .18 : .09,
+      beamHeight,
+      8,
+      1,
+      true
+    ),
+    new THREE.MeshBasicMaterial({
+      color:color,
+      transparent:true,
+      opacity:rarity === 'legendary' ? .28 : .18,
+      depthWrite:false,
+      side:THREE.DoubleSide
+    })
+  );
+
+  beam.position.y = beamHeight / 2 + .3;
+  beam.userData.lootBeam14 = true;
+  gem.add(beam);
+
+  const glow = new THREE.Mesh(
+    new THREE.TorusGeometry(
+      rarity === 'legendary' ? .65 : .43,
+      .045,
+      8,
+      32
+    ),
+    new THREE.MeshBasicMaterial({
+      color:color,
+      transparent:true,
+      opacity:.85
+    })
+  );
+
+  glow.rotation.x = Math.PI / 2;
+  glow.position.y = -.25;
+  gem.add(glow);
+
+  if (rarity === 'legendary') {
+    gem.scale.setScalar(1.35);
+  }
+};
+
+// Apply meaningful rarity bonuses to equipped gear.
+recalculateStats = function() {
+  equipmentStats = {damage:28,armor:0};
+
+  for (const item of Object.values(equipped)) {
+    if (!item) continue;
+
+    const multiplier =
+      lootMultipliers14[item.rarity] || 1;
+
+    equipmentStats.damage +=
+      Math.round((Number(item.damage) || 0) * multiplier);
+
+    equipmentStats.armor +=
+      Math.round((Number(item.armor) || 0) * multiplier);
+  }
+
+  equipmentStats.damage = Math.round(equipmentStats.damage);
+  equipmentStats.armor = Math.round(equipmentStats.armor);
+};
+
+// Special pickup notification and legendary effects.
+const originalCollectCrystal14 = collectCrystal;
+
+collectCrystal = function(c) {
+  if (!c || !c.userData || !c.userData.item) {
+    originalCollectCrystal14(c);
+    return;
+  }
+
+  const item = c.userData.item;
+  const rarity = item.rarity || 'common';
+
+  originalCollectCrystal14(c);
+  showLootNotice14(item,true);
+
+  if (rarity === 'legendary') {
+    const burst = new THREE.Mesh(
+      new THREE.TorusGeometry(.7,.12,10,40),
+      new THREE.MeshBasicMaterial({
+        color:0xffb52e,
+        transparent:true,
+        opacity:1
+      })
+    );
+
+    burst.position.set(c.position.x,.35,c.position.z);
+    burst.rotation.x = Math.PI / 2;
+    scene.add(burst);
+    effects.push({mesh:burst,life:.9,max:.9});
+
+    for (let i=0;i<10;i++) {
+      const angle = Math.PI * 2 * i / 10;
+      const spark = new THREE.Mesh(
+        new THREE.SphereGeometry(.09,6,6),
+        new THREE.MeshBasicMaterial({
+          color:0xffd36a,
+          transparent:true,
+          opacity:1
+        })
+      );
+
+      spark.position.set(
+        c.position.x + Math.cos(angle)*.7,
+        .5 + Math.random(),
+        c.position.z + Math.sin(angle)*.7
+      );
+
+      scene.add(spark);
+      effects.push({mesh:spark,life:.65,max:.65});
+    }
+
+    showMessage('★ LEGENDARY ITEM ACQUIRED ★',2.5);
+  }
+};
+
+// Add item comparisons to the existing inventory.
+const originalRenderInventory14 = renderInventory;
+
+renderInventory = function() {
+  originalRenderInventory14();
+
+  const rows = document.querySelectorAll('#bag .item');
+
+  rows.forEach((row,index) => {
+    const item = bag[index];
+    if (!item) return;
+
+    const current = equipped[item.type];
+    const multiplier =
+      lootMultipliers14[item.rarity] || 1;
+
+    const newValue = item.type === 'Weapon'
+      ? Math.round((Number(item.damage)||0)*multiplier)
+      : Math.round((Number(item.armor)||0)*multiplier);
+
+    let oldValue = 0;
+    if (current) {
+      const oldMultiplier =
+        lootMultipliers14[current.rarity] || 1;
+
+      oldValue = item.type === 'Weapon'
+        ? Math.round((Number(current.damage)||0)*oldMultiplier)
+        : Math.round((Number(current.armor)||0)*oldMultiplier);
+    }
+
+    const difference = newValue - oldValue;
+    const statName = item.type === 'Weapon' ? 'DAMAGE' : 'ARMOR';
+
+    const compare = document.createElement('div');
+    compare.className = 'lootCompare14';
+
+    const heading = document.createElement('strong');
+    heading.textContent = 'EQUIPMENT COMPARISON';
+
+    const detail = document.createElement('span');
+
+    if (!current) {
+      detail.textContent =
+        'New slot item · +' + newValue + ' ' + statName;
+      detail.style.color = '#55d78a';
+    } else if (difference > 0) {
+      detail.textContent =
+        '▲ +' + difference + ' ' + statName + ' · BETTER';
+      detail.style.color = '#55e58a';
+    } else if (difference < 0) {
+      detail.textContent =
+        '▼ ' + difference + ' ' + statName + ' · LOWER';
+      detail.style.color = '#ff7777';
+    } else {
+      detail.textContent = 'Equal stats';
+      detail.style.color = '#bbbbbb';
+    }
+
+    const bonus = document.createElement('div');
+    bonus.style.marginTop = '3px';
+    bonus.style.color = '#d5b875';
+    bonus.textContent =
+      'Rarity bonus: ' + Math.round((multiplier-1)*100) + '%';
+
+    compare.append(heading,detail,bonus);
+    row.appendChild(compare);
+  });
+};
+
+// Update the version display.
+document.title = 'ECLIPSE — Worlds Beyond 0.14';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.13')) {
+    p.textContent = 'DIABLO LOOT & EQUIPMENT — UPDATE 0.14';
+  }
+});
+
+console.log('ECLIPSE 0.14 — DIABLO LOOT & EQUIPMENT LOADED');
+
 </script>
 </body>
 </html>
