@@ -3255,6 +3255,195 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.15 — ELITE ENEMIES & BOSS PHASES LOADED');
 
+/* =========================================
+   ECLIPSE 0.16 — MERCHANT & SELL EQUIPMENT
+   ========================================= */
+
+const sellStyle16 = document.createElement('style');
+
+sellStyle16.textContent = `
+.sellToolbar16 {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:9px;
+  padding:11px;
+  margin:8px 0 12px;
+  border:1px solid #70552e;
+  border-radius:7px;
+  background:linear-gradient(135deg,#211b16,#11131b);
+}
+.sellToolbar16 .sellBalance16 {
+  color:#e8c276;
+  font-size:12px;
+  font-weight:900;
+}
+.sellToolbar16 button,
+.sellButton16 {
+  border:1px solid #b98a45 !important;
+  border-radius:5px !important;
+  padding:8px 11px !important;
+  color:#ffe0a0 !important;
+  background:#382817 !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+}
+.sellToolbar16 button:disabled {
+  opacity:.35;
+}
+.sellButton16 {
+  margin-left:6px;
+  background:#30241b !important;
+  border-color:#8a6335 !important;
+}
+.sellPrice16 {
+  color:#e8c276;
+  font-size:11px;
+  font-weight:800;
+  margin-top:5px;
+}
+`;
+
+document.head.appendChild(sellStyle16);
+
+// Sale values by equipment rarity.
+const sellPrices16 = {
+  common:2,
+  uncommon:4,
+  rare:8,
+  epic:15,
+  legendary:30
+};
+
+function getSellPrice16(item) {
+  return sellPrices16[item.rarity] || 2;
+}
+
+function updateSellBalance16() {
+  const balance = document.getElementById('inventoryShards11');
+  if (balance) balance.textContent = shards;
+}
+
+// Create the backpack selling toolbar.
+const bag16 = document.getElementById('bag');
+
+const sellToolbar16 = document.createElement('div');
+sellToolbar16.className = 'sellToolbar16';
+
+const sellBalance16 = document.createElement('div');
+sellBalance16.className = 'sellBalance16';
+
+const sellAll16 = document.createElement('button');
+sellAll16.textContent = 'SELL ENTIRE BAG';
+
+sellAll16.onclick = () => {
+  if (!bag.length) {
+    showMessage('BACKPACK IS EMPTY',1);
+    return;
+  }
+
+  const total = bag.reduce(
+    (sum,item) => sum + getSellPrice16(item),0
+  );
+
+  if (!confirm(
+    'Sell all '+bag.length+' backpack items for '+total+
+    ' Energy Shards?\n\nEquipped equipment will NOT be sold.'
+  )) return;
+
+  const count = bag.length;
+  bag = [];
+  shards += total;
+
+  saveGame();
+  renderInventory();
+  showMessage(count+' ITEMS SOLD — +'+total+' SHARDS',2.5);
+};
+
+sellToolbar16.append(sellBalance16,sellAll16);
+
+// Insert toolbar above the backpack contents.
+bag16.parentElement.insertBefore(sellToolbar16,bag16);
+
+// Sell individual items without touching equipped gear.
+function sellBagItem16(item) {
+  const index = bag.findIndex(a => a.id === item.id);
+  if (index < 0) return;
+
+  const price = getSellPrice16(item);
+
+  bag.splice(index,1);
+  shards += price;
+
+  saveGame();
+  renderInventory();
+
+  showMessage(item.name+' SOLD — +'+price+' SHARDS',1.8);
+}
+
+// Preserve the existing inventory, comparison and equipment systems.
+const originalRenderInventory16 = renderInventory;
+
+renderInventory = function() {
+  originalRenderInventory16();
+
+  updateSellBalance16();
+
+  sellAll16.disabled = bag.length === 0;
+
+  sellBalance16.textContent =
+    'YOUR SHARDS: '+shards+'  ·  ITEMS: '+bag.length;
+
+  const rows = document.querySelectorAll('#bag .item');
+
+  rows.forEach((row,index) => {
+    const item = bag[index];
+    if (!item) return;
+
+    const sellButton = document.createElement('button');
+    sellButton.className = 'sellButton16';
+    sellButton.textContent =
+      'SELL +' + getSellPrice16(item) + ' SHARDS';
+
+    sellButton.onclick = () => sellBagItem16(item);
+
+    const equipButton = row.querySelector('button');
+    if (equipButton) {
+      equipButton.insertAdjacentElement('afterend',sellButton);
+    } else {
+      row.appendChild(sellButton);
+    }
+
+    const price = document.createElement('div');
+    price.className = 'sellPrice16';
+    price.textContent =
+      'SELL VALUE: '+getSellPrice16(item)+' ENERGY SHARDS';
+
+    row.appendChild(price);
+  });
+};
+
+// Refresh selling balance whenever inventory is opened.
+const originalOpenInventory16 = openInventory;
+
+openInventory = function() {
+  originalOpenInventory16();
+  updateSellBalance16();
+};
+
+// Version display.
+document.title = 'ECLIPSE — Worlds Beyond 0.16';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.14') ||
+      p.textContent.includes('0.15')) {
+    p.textContent = 'MERCHANT & INVENTORY SELLING — UPDATE 0.16';
+  }
+});
+
+console.log('ECLIPSE 0.16 — MERCHANT & SELLING LOADED');
+
 </script>
 </body>
 </html>
