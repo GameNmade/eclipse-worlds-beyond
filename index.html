@@ -1,0 +1,200 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ECLIPSE — Worlds Beyond</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050914;color:white;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block}
+#title{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at center,#17334a 0%,#091321 48%,#02050c 100%);padding:24px}
+#title h1{font-size:clamp(48px,12vw,90px);letter-spacing:12px;margin:0;color:#d7faff;text-shadow:0 0 24px #28cfff}
+#title p{letter-spacing:5px;color:#75d9ef}
+#enter{margin-top:35px;padding:18px 35px;border:1px solid #55e5ff;background:#092b3b;color:white;font-size:16px;letter-spacing:3px;border-radius:5px}
+#hud{display:none;position:fixed;inset:0;z-index:3;pointer-events:none}
+#stats{position:absolute;top:18px;left:16px;background:#071523bb;padding:12px;border:1px solid #39c8e866;border-radius:7px;font-size:13px}
+#controls{position:absolute;bottom:22px;left:20px;display:grid;grid-template-columns:55px 55px 55px;grid-template-rows:55px 55px 55px;gap:5px;pointer-events:auto}
+.ctrl{border:1px solid #75eaff88;background:#0b263bba;color:white;border-radius:12px;font-size:23px;touch-action:none}
+#up{grid-column:2}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
+#fire{position:absolute;right:25px;bottom:42px;width:82px;height:82px;border-radius:50%;background:#692a38bb;border:2px solid #ff758c;color:white;font-weight:bold;pointer-events:auto}
+#hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;color:#c3e6f2;white-space:nowrap}
+#error{display:none;position:fixed;z-index:10;inset:0;background:#050914;color:white;padding:25px;align-items:center;justify-content:center;text-align:center}
+</style>
+</head>
+<body>
+<div id="title">
+<h1>ECLIPSE</h1>
+<p>W O R L D S &nbsp; B E Y O N D</p>
+<div>THE FRONTIER AWAITS</div>
+<button id="enter">ENTER THE FRONTIER</button>
+</div>
+<div id="hud">
+<div id="stats">VESPER — FRONTIER ZONE<br>HEALTH: <span id="health">100</span>%<br>ENERGY SHARDS: <span id="score">0</span></div>
+<div id="controls">
+<button class="ctrl" id="up">▲</button>
+<button class="ctrl" id="left">◀</button>
+<button class="ctrl" id="down">▼</button>
+<button class="ctrl" id="right">▶</button>
+</div>
+<button id="fire">FIRE</button>
+<div id="hint">EXPLORE VESPER • COLLECT ENERGY SHARDS</div>
+</div>
+<div id="error"></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+const title=document.getElementById('title');
+const hud=document.getElementById('hud');
+const error=document.getElementById('error');
+const scoreText=document.getElementById('score');
+let scene,camera,renderer,player,crystals=[],shots=[],score=0;
+let running=false,keys={},fireHeld=false;
+const clock=new THREE.Clock();
+
+function terrainHeight(x,z){
+ return Math.sin(x*.13)*1.1+Math.cos(z*.12)*1.0+Math.sin((x+z)*.08)*.7;
+}
+function makeTerrain(){
+ const geo=new THREE.PlaneGeometry(500,500,100,100);
+ geo.rotateX(-Math.PI/2);
+ const p=geo.attributes.position;
+ for(let i=0;i<p.count;i++){
+  const x=p.getX(i),z=p.getZ(i);
+  p.setY(i,terrainHeight(x,z));
+ }
+ geo.computeVertexNormals();
+ const mat=new THREE.MeshStandardMaterial({color:0x52646a,roughness:1});
+ const ground=new THREE.Mesh(geo,mat);
+ scene.add(ground);
+}
+function makeRock(x,z,s){
+ const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),
+ new THREE.MeshStandardMaterial({color:0x596c72,roughness:1}));
+ rock.position.set(x,terrainHeight(x,z)+s*.5,z);
+ rock.rotation.set(Math.random(),Math.random(),Math.random());
+ scene.add(rock);
+}
+function makeCrystal(x,z){
+ const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.65),
+ new THREE.MeshStandardMaterial({color:0x42edff,emissive:0x087caa,emissiveIntensity:2}));
+ crystal.position.set(x,terrainHeight(x,z)+1.2,z);
+ scene.add(crystal);
+ crystals.push(crystal);
+}
+function createPlayer(){
+ player=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.9,4,8),
+ new THREE.MeshStandardMaterial({color:0x263d53,metalness:.5,roughness:.4}));
+ body.position.y=1.05;player.add(body);
+ const visor=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),
+ new THREE.MeshStandardMaterial({color:0x39dfff,emissive:0x159dce,emissiveIntensity:2}));
+ visor.scale.set(1,.55,.65);visor.position.set(0,1.65,-.3);player.add(visor);
+ scene.add(player);
+}
+function boot(){
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x07111d);
+ scene.fog=new THREE.Fog(0x07111d,35,160);
+ camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,500);
+ renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ document.body.appendChild(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0x9bdcff,0x252b34,2));
+ const sun=new THREE.DirectionalLight(0xffe0b2,2.5);
+ sun.position.set(-30,60,20);scene.add(sun);
+ makeTerrain();
+ for(let i=0;i<100;i++){
+  const x=(Math.random()-.5)*180,z=(Math.random()-.5)*180;
+  makeRock(x,z,Math.random()*2+1);
+ }
+ for(let i=0;i<22;i++){
+  makeCrystal((Math.random()-.5)*100,(Math.random()-.5)*100);
+ }
+ const moon=new THREE.Mesh(new THREE.SphereGeometry(9,32,32),
+ new THREE.MeshStandardMaterial({color:0x9cb6c8,roughness:1}));
+ moon.position.set(45,48,-120);scene.add(moon);
+ const stars=new THREE.BufferGeometry(),positions=[];
+ for(let i=0;i<700;i++){
+  positions.push((Math.random()-.5)*400,Math.random()*180+10,(Math.random()-.5)*400);
+ }
+ stars.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xbcecff,size:.7})));
+ createPlayer();
+ camera.position.set(0,6,10);
+ window.addEventListener('resize',resize);
+ animate();
+}
+function resize(){
+ if(!camera||!renderer)return;
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+}
+function shoot(){
+ if(!running)return;
+ const dir=new THREE.Vector3(0,0,-1).applyQuaternion(player.quaternion);
+ const orb=new THREE.Mesh(new THREE.SphereGeometry(.18),
+ new THREE.MeshBasicMaterial({color:0x54edff}));
+ orb.position.copy(player.position).add(new THREE.Vector3(0,1.5,0));
+ scene.add(orb);shots.push({mesh:orb,dir,life:1.3});
+}
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+ if(running){
+  let x=0,z=0;
+  if(keys.up||keys.w)z-=1;
+  if(keys.down||keys.s)z+=1;
+  if(keys.left||keys.a)x-=1;
+  if(keys.right||keys.d)x+=1;
+  const move=new THREE.Vector3(x,0,z);
+  if(move.length()>0){
+   move.normalize();
+   player.position.x+=move.x*dt*11;
+   player.position.z+=move.z*dt*11;
+   player.rotation.y=Math.atan2(-move.x,-move.z);
+  }
+  player.position.y=terrainHeight(player.position.x,player.position.z);
+  const target=new THREE.Vector3(player.position.x,player.position.y+5,player.position.z+9);
+  camera.position.lerp(target,.09);
+  camera.lookAt(player.position.x,player.position.y+1,player.position.z);
+  for(let i=crystals.length-1;i>=0;i--){
+   const c=crystals[i];c.rotation.y+=dt*1.5;c.position.y+=Math.sin(clock.elapsedTime*2+i)*.003;
+   if(c.position.distanceTo(new THREE.Vector3(player.position.x,player.position.y+1,player.position.z))<2){
+    scene.remove(c);crystals.splice(i,1);score++;scoreText.textContent=score;
+   }
+  }
+  for(let i=shots.length-1;i>=0;i--){
+   const s=shots[i];s.mesh.position.addScaledVector(s.dir,dt*35);s.life-=dt;
+   if(s.life<=0){scene.remove(s.mesh);shots.splice(i,1);}
+  }
+ }
+ renderer.render(scene,camera);
+}
+document.getElementById('enter').addEventListener('click',()=>{
+ if(running)return;
+ try{
+  if(!renderer)boot();
+  running=true;title.style.display='none';hud.style.display='block';
+ }catch(e){
+  title.style.display='none';error.style.display='flex';
+  error.textContent='Unable to start the 3D world. Please open this game using Safari with an internet connection. '+e.message;
+ }
+});
+document.getElementById('fire').addEventListener('pointerdown',e=>{e.preventDefault();shoot()});
+function bind(id,key){
+ const el=document.getElementById(id);
+ el.addEventListener('pointerdown',e=>{e.preventDefault();keys[key]=true;el.setPointerCapture(e.pointerId)});
+ el.addEventListener('pointerup',()=>keys[key]=false);
+ el.addEventListener('pointercancel',()=>keys[key]=false);
+ el.addEventListener('lostpointercapture',()=>keys[key]=false);
+}
+bind('up','up');bind('down','down');bind('left','left');bind('right','right');
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+</script>
+</body>
+</html>
