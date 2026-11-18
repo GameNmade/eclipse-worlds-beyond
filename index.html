@@ -2929,6 +2929,332 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.14 — DIABLO LOOT & EQUIPMENT LOADED');
 
+/* =========================================
+   ECLIPSE 0.15 — ELITE ENEMIES & BOSS PHASES
+   ========================================= */
+
+const eliteStyle15 = document.createElement('style');
+eliteStyle15.textContent = `
+.eliteLabel15 {
+  position:fixed;
+  z-index:5;
+  pointer-events:none;
+  transform:translate(-50%,-50%);
+  color:#ffbd55;
+  font-size:10px;
+  font-weight:1000;
+  letter-spacing:2px;
+  text-shadow:0 0 8px #ff5b22,0 2px 4px #000;
+  white-space:nowrap;
+}
+`;
+document.head.appendChild(eliteStyle15);
+
+const eliteLabels15 = new Map();
+let bossPhase15 = 1;
+
+const originalCreateEnemy15 = createEnemy;
+
+// Give some enemies a special elite modifier.
+createEnemy = function(x,z) {
+  originalCreateEnemy15(x,z);
+
+  const enemy = enemies[enemies.length-1];
+  if (!enemy) return;
+
+  if (Math.random() > .16) return;
+
+  const affixes = [
+    {name:'FRENZIED',color:0xff493e,speed:1.55,hp:1.35},
+    {name:'BULWARK',color:0x49aaff,speed:.78,hp:1.9},
+    {name:'VOIDTOUCHED',color:0xc18aff,speed:1.15,hp:1.55}
+  ];
+
+  const affix = affixes[
+    Math.floor(Math.random()*affixes.length)
+  ];
+
+  enemy.userData.elite15 = true;
+  enemy.userData.affix15 = affix.name;
+  enemy.userData.hp = Math.round(enemy.userData.hp*affix.hp);
+  enemy.userData.maxHp = enemy.userData.hp;
+  enemy.userData.speed *= affix.speed;
+
+  enemy.scale.setScalar(1.22);
+
+  const aura = new THREE.Mesh(
+    new THREE.TorusGeometry(.95,.065,8,32),
+    new THREE.MeshBasicMaterial({
+      color:affix.color,
+      transparent:true,
+      opacity:.85
+    })
+  );
+
+  aura.rotation.x = Math.PI/2;
+  aura.position.y = .15;
+  enemy.add(aura);
+  enemy.userData.aura15 = aura;
+
+  const label = document.createElement('div');
+  label.className = 'eliteLabel15';
+  label.textContent = '★ '+affix.name+' ★';
+  document.body.appendChild(label);
+  eliteLabels15.set(enemy,label);
+
+  showMessage('ELITE HOSTILE DETECTED',1.5);
+};
+
+// Show enemy attack warnings before melee damage.
+const originalUpdateEnemiesBase15 = updateEnemiesBase;
+
+updateEnemiesBase = function(dt) {
+  for (const enemy of enemies) {
+    const dx = player.position.x-enemy.position.x;
+    const dz = player.position.z-enemy.position.z;
+    const distance = Math.hypot(dx,dz);
+
+    const warning =
+      distance <= 1.8 &&
+      enemy.userData.attack <= .42;
+
+    if (warning && !enemy.userData.warning15) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(
+          enemy.userData.elite15 ? 1.5 : 1.05,
+          .075,
+          8,
+          36
+        ),
+        new THREE.MeshBasicMaterial({
+          color:0xff392f,
+          transparent:true,
+          opacity:.85
+        })
+      );
+
+      ring.rotation.x = Math.PI/2;
+      ring.position.y = .12;
+      enemy.add(ring);
+      enemy.userData.warning15 = ring;
+    }
+
+    if (enemy.userData.warning15) {
+      const ring = enemy.userData.warning15;
+      ring.material.opacity =
+        .35 + Math.abs(Math.sin(clock.elapsedTime*13))*.6;
+
+      if (!warning) {
+        enemy.remove(ring);
+        ring.geometry.dispose();
+        ring.material.dispose();
+        enemy.userData.warning15 = null;
+      }
+    }
+
+    if (enemy.userData.aura15) {
+      enemy.userData.aura15.rotation.z += dt*1.4;
+    }
+  }
+
+  originalUpdateEnemiesBase15(dt);
+};
+
+// Add elite labels and update their screen positions.
+function updateEliteLabels15() {
+  for (const [enemy,label] of eliteLabels15) {
+    if (!enemies.includes(enemy)) {
+      label.remove();
+      eliteLabels15.delete(enemy);
+      continue;
+    }
+
+    const point = enemy.position.clone();
+    point.y += 3.1;
+    point.project(camera);
+
+    const x = (point.x*.5+.5)*innerWidth;
+    const y = (-point.y*.5+.5)*innerHeight;
+
+    label.style.left = x+'px';
+    label.style.top = y+'px';
+    label.style.display =
+      point.z < 1 &&
+      x > -80 && x < innerWidth+80 &&
+      y > -40 && y < innerHeight+40
+        ? 'block' : 'none';
+  }
+}
+
+// Reward elite defeats with extra experience and loot.
+const originalDamageEnemy15 = damageEnemy;
+
+damageEnemy = function(enemy,amount) {
+  const wasAlive = enemy &&
+    enemy !== boss &&
+    enemies.includes(enemy);
+
+  const wasElite = wasAlive &&
+    enemy.userData.elite15;
+
+  const x = wasElite ? enemy.position.x : 0;
+  const z = wasElite ? enemy.position.z : 0;
+
+  originalDamageEnemy15(enemy,amount);
+
+  if (wasElite && !enemies.includes(enemy)) {
+    const label = eliteLabels15.get(enemy);
+    if (label) {
+      label.remove();
+      eliteLabels15.delete(enemy);
+    }
+
+    xp += 100;
+    shards += 5;
+    checkLevel();
+    saveGame();
+
+    if (Math.random() < .75) {
+      createLoot(x+1,z+1);
+    }
+
+    showMessage('ELITE SLAIN — BONUS XP + SHARDS',2);
+  }
+};
+
+// Boss health thresholds activate increasingly dangerous phases.
+function activateBossPhase15(phase) {
+  if (!boss || bossPhase15 >= phase) return;
+
+  bossPhase15 = phase;
+
+  if (phase === 2) {
+    boss.userData.speed *= 1.28;
+    boss.userData.attack = .8;
+    boss.userData.pulse = 2.5;
+    boss.scale.setScalar(1.48);
+
+    showMessage('WARDEN PHASE II — FURY AWAKENED',3);
+  }
+
+  if (phase === 3) {
+    boss.userData.speed *= 1.32;
+    boss.userData.attack = .6;
+    boss.userData.pulse = 1.5;
+    boss.scale.setScalar(1.62);
+
+    showMessage('WARDEN PHASE III — RIFT ANGER',3);
+  }
+
+  const burst = new THREE.Mesh(
+    new THREE.TorusGeometry(2,.16,10,48),
+    new THREE.MeshBasicMaterial({
+      color:phase === 2 ? 0xff8a32 : 0xff244f,
+      transparent:true,
+      opacity:1
+    })
+  );
+
+  burst.position.set(
+    boss.position.x,.3,boss.position.z
+  );
+  burst.rotation.x = Math.PI/2;
+  scene.add(burst);
+  effects.push({mesh:burst,life:1,max:1});
+}
+
+// Preserve critical hits and existing boss rewards.
+const originalDamageWithElite15 = damageEnemy;
+
+damageEnemy = function(enemy,amount) {
+  const isBoss = enemy && enemy === boss;
+  const before = isBoss ? enemy.userData.hp : 0;
+
+  originalDamageWithElite15(enemy,amount);
+
+  if (isBoss && boss && boss.parent) {
+    const percent =
+      boss.userData.hp / boss.userData.maxHp;
+
+    if (percent <= .30) {
+      activateBossPhase15(3);
+    } else if (percent <= .65) {
+      activateBossPhase15(2);
+    }
+  }
+
+  if (isBoss && !boss) {
+    bossPhase15 = 1;
+  }
+};
+
+// Add a visible warning ring before the Warden shockwave.
+const originalUpdateEnemies15 = updateEnemies;
+
+updateEnemies = function(dt) {
+  if (boss && boss.parent) {
+    if (!boss.userData.warningRing15) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(2.4,.12,8,48),
+        new THREE.MeshBasicMaterial({
+          color:0xff3154,
+          transparent:true,
+          opacity:.7
+        })
+      );
+
+      ring.rotation.x = Math.PI/2;
+      ring.position.y = .12;
+      boss.add(ring);
+      boss.userData.warningRing15 = ring;
+    }
+
+    const ring = boss.userData.warningRing15;
+    const warning = boss.userData.pulse < 1.1;
+
+    ring.visible = warning;
+
+    if (warning) {
+      ring.material.opacity =
+        .25 + Math.abs(Math.sin(clock.elapsedTime*12))*.65;
+      ring.scale.setScalar(
+        1 + Math.sin(clock.elapsedTime*10)*.12
+      );
+    }
+  }
+
+  originalUpdateEnemies15(dt);
+};
+
+// Reset boss phase when a new Warden is created.
+const originalCreateBoss15 = createBoss;
+
+createBoss = function() {
+  originalCreateBoss15();
+  bossPhase15 = 1;
+};
+
+// Add elite tracking to the existing combat visual loop.
+const originalAnimate15 = animate;
+
+animate = function() {
+  if (started && !inventoryOpen) {
+    updateEliteLabels15();
+  }
+  originalAnimate15();
+};
+
+// Update the game version.
+document.title = 'ECLIPSE — Worlds Beyond 0.15';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.14')) {
+    p.textContent = 'ELITE ENEMIES & BOSS PHASES — UPDATE 0.15';
+  }
+});
+
+console.log('ECLIPSE 0.15 — ELITE ENEMIES & BOSS PHASES LOADED');
+
 </script>
 </body>
 </html>
