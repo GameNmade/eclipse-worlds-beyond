@@ -2407,6 +2407,213 @@ document.querySelectorAll('#titleScreen p').forEach(p => {
 
 console.log('ECLIPSE 0.12 — DIABLO COMBAT INTERFACE LOADED');
 
+/* =========================================
+   ECLIPSE 0.13 — DIABLO COMBAT FEEDBACK
+   ========================================= */
+
+const combatStyle13 = document.createElement('style');
+combatStyle13.textContent = `
+.enemyHealth13 {
+  position:fixed;
+  width:48px;
+  height:6px;
+  border:1px solid #c28a83;
+  border-radius:8px;
+  background:#180b10;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:4;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 8px #000;
+}
+.enemyHealthFill13 {
+  height:100%;
+  width:100%;
+  background:linear-gradient(90deg,#8e1829,#ff5260);
+  transition:width .12s;
+}
+.damageFloat13 {
+  position:fixed;
+  z-index:12;
+  pointer-events:none;
+  transform:translate(-50%,-50%);
+  color:#fff1d2;
+  font-size:17px;
+  font-weight:900;
+  text-shadow:0 2px 4px #000,0 0 9px #ff593d;
+  white-space:nowrap;
+}
+.damageFloat13.critical13 {
+  color:#ffbd55;
+  font-size:25px;
+  text-shadow:0 2px 5px #000,0 0 13px #ff721e;
+}
+.damageFloat13.defeat13 {
+  color:#ff7777;
+  font-size:15px;
+  letter-spacing:2px;
+}
+`;
+
+document.head.appendChild(combatStyle13);
+
+const enemyBars13 = new Map();
+const damageFloats13 = [];
+
+function damagePopup13(target, amount, critical, defeated) {
+  const popup = document.createElement('div');
+  popup.className = 'damageFloat13' +
+    (critical ? ' critical13' : '') +
+    (defeated ? ' defeat13' : '');
+
+  popup.textContent = defeated
+    ? 'ELIMINATED'
+    : (critical ? 'CRITICAL! ' : '') + Math.round(amount);
+
+  document.body.appendChild(popup);
+
+  damageFloats13.push({
+    element: popup,
+    target: target,
+    born: performance.now(),
+    critical: critical,
+    offset: Math.random() * 24 - 12
+  });
+}
+
+// Add critical hits while preserving existing combat and rewards.
+const originalDamageEnemy13 = damageEnemy;
+
+damageEnemy = function(enemy, amount) {
+  if (!enemy || !enemy.userData || !enemies.includes(enemy) && enemy !== boss) {
+    return originalDamageEnemy13(enemy, amount);
+  }
+
+  const critical = Math.random() < 0.12;
+  const finalDamage = critical ? amount * 1.8 : amount;
+  const before = enemy.userData.hp;
+
+  originalDamageEnemy13(enemy, finalDamage);
+
+  const after = enemy.userData.hp;
+  const dealt = Math.max(0, before - after);
+  const defeated = enemy === boss
+    ? after <= 0
+    : !enemies.includes(enemy);
+
+  if (dealt > 0) {
+    damagePopup13(enemy, dealt, critical, defeated);
+  }
+
+  if (critical && dealt > 0) {
+    showMessage('CRITICAL HIT!', 0.45);
+  }
+};
+
+// Draw floating health bars above engaged enemies.
+function updateCombatVisuals13() {
+  const now = performance.now();
+  const active = new Set(enemies);
+
+  for (const [enemy, bar] of enemyBars13) {
+    if (!active.has(enemy)) {
+      bar.remove();
+      enemyBars13.delete(enemy);
+    }
+  }
+
+  for (const enemy of enemies) {
+    const distance = enemy.position.distanceTo(player.position);
+    const damaged = enemy.userData.hp < enemy.userData.maxHp;
+
+    if (distance > 25 || (!damaged && distance > 17)) {
+      const oldBar = enemyBars13.get(enemy);
+      if (oldBar) {
+        oldBar.remove();
+        enemyBars13.delete(enemy);
+      }
+      continue;
+    }
+
+    let bar = enemyBars13.get(enemy);
+
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'enemyHealth13';
+
+      const fill = document.createElement('div');
+      fill.className = 'enemyHealthFill13';
+      bar.appendChild(fill);
+
+      document.body.appendChild(bar);
+      enemyBars13.set(enemy, bar);
+    }
+
+    const fill = bar.firstElementChild;
+    fill.style.width =
+      Math.max(0, enemy.userData.hp / enemy.userData.maxHp * 100) + '%';
+
+    const point = enemy.position.clone();
+    point.y += 3.25;
+    point.project(camera);
+
+    const x = (point.x * 0.5 + 0.5) * innerWidth;
+    const y = (-point.y * 0.5 + 0.5) * innerHeight;
+
+    bar.style.left = x + 'px';
+    bar.style.top = y + 'px';
+    bar.style.display =
+      point.z < 1 && x > -60 && x < innerWidth + 60 &&
+      y > -30 && y < innerHeight + 30
+        ? 'block' : 'none';
+  }
+
+  // Animate damage numbers upward and remove expired ones.
+  for (let i = damageFloats13.length - 1; i >= 0; i--) {
+    const item = damageFloats13[i];
+    const age = (now - item.born) / 1000;
+
+    if (age > 0.9 || !item.element.isConnected) {
+      item.element.remove();
+      damageFloats13.splice(i, 1);
+      continue;
+    }
+
+    const point = item.target.position.clone();
+    point.y += item.target === boss ? 5 : 3;
+    point.project(camera);
+
+    const x = (point.x * 0.5 + 0.5) * innerWidth + item.offset;
+    const y = (-point.y * 0.5 + 0.5) * innerHeight - age * 48;
+
+    item.element.style.left = x + 'px';
+    item.element.style.top = y + 'px';
+    item.element.style.opacity = Math.max(0, 1 - age / 0.9);
+  }
+}
+
+// Attach visuals to the existing HUD refresh.
+const originalUpdateHUD13 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD13();
+
+  if (started && camera && player) {
+    updateCombatVisuals13();
+  }
+};
+
+// Update the game version.
+document.title = 'ECLIPSE — Worlds Beyond 0.13';
+
+document.querySelectorAll('#titleScreen p').forEach(p => {
+  if (p.textContent.includes('0.12')) {
+    p.textContent = 'DIABLO COMBAT FEEDBACK — UPDATE 0.13';
+  }
+});
+
+console.log('ECLIPSE 0.13 — COMBAT FEEDBACK LOADED');
+
 </script>
 </body>
 </html>
