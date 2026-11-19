@@ -94,6 +94,16 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 .item button{float:none;margin:5px 4px 0 0;padding:5px 7px;font-size:9px}
 .item div{margin-top:4px!important;font-size:10px}
 @media(max-width:380px){.invPanel{padding:8px}.invHeader h2{font-size:15px}.slot{padding:5px;min-height:44px}.item{padding:7px}}
+button{transition:transform .12s ease,filter .12s ease,box-shadow .12s ease;box-shadow:0 3px 10px #0007}
+button:active{transform:translateY(1px) scale(.97);filter:brightness(1.3)}
+.invPanel{border-color:#a66d80;box-shadow:0 0 28px #a13b5b30,inset 0 0 24px #ffffff08}
+.invHeader{padding-bottom:8px;border-bottom:1px solid #684653}
+.slot{background:linear-gradient(145deg,#1b202a,#101219);border-color:#58606e;box-shadow:inset 0 0 12px #6bdfff08}
+.item{border-color:#58606e;box-shadow:0 4px 12px #0006}
+.item button,.slot button{border-color:#6d9caf;background:linear-gradient(135deg,#214252,#172832)}
+#fullScreenButton{background:#263c49;border-color:#70b6ca}
+#fullScreenButton:active{box-shadow:0 0 14px #55dfff88}
+html:fullscreen,html:fullscreen body{width:100%;height:100%;background:#08090d}
 </style>
 </head>
 <body>
@@ -133,6 +143,7 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
  </div>
  <div class="actions">
   <button class="action" id="skillsButton">SKILLS</button>
+  <button class="action" id="fullScreenButton">FULL SCREEN</button>
   <button class="action" id="portalButton">ENTER PORTAL</button>
   <button class="action" id="inventoryButton">INVENTORY</button>
   <button class="action" id="fire">PLASMA FIRE</button>
@@ -177,6 +188,7 @@ let fireHeld=false,keys={};
 let fireCooldown=0,novaCooldown=0,dodgeCooldown=0,dodgeTime=0;
 let messageTimer=0,wave=1;
 let cameraYaw=0,cameraPitch=.12;
+let cameraDistance=9;
 let joystick={x:0,y:0},stickPointer=null,lookPointer=null,lastLook=null;
 let inventoryOpen=false;
 let equipped={Weapon:null,Helmet:null,Chest:null,Gloves:null,Boots:null,Accessory:null};
@@ -437,8 +449,8 @@ function updateEffects(dt){
  }
 }
 function updateCamera(dt){
- const horizontal=9*Math.cos(cameraPitch);
- const offset=new THREE.Vector3(Math.sin(cameraYaw)*horizontal,3.5+Math.sin(cameraPitch)*9,Math.cos(cameraYaw)*horizontal);
+ const horizontal=cameraDistance*Math.cos(cameraPitch);
+ const offset=new THREE.Vector3(Math.sin(cameraYaw)*horizontal,3.5+Math.sin(cameraPitch)*cameraDistance,Math.cos(cameraYaw)*horizontal);
  const desired=player.position.clone().add(offset);
  camera.position.lerp(desired,1-Math.pow(.001,dt));camera.lookAt(player.position.x,1.35,player.position.z);
 }
@@ -499,17 +511,39 @@ function setupJoystick(){
  area.addEventListener('pointerup',release);area.addEventListener('pointercancel',release);
 }
 function setupCameraTouch(){
+ const activeTouches=new Map();
+ let pinchStartDistance=0,pinchStartZoom=cameraDistance;
  renderer.domElement.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse'||inventoryOpen||e.clientX<innerWidth*.43)return;
-  lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);
+  activeTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  renderer.domElement.setPointerCapture(e.pointerId);
+  if(activeTouches.size===2){
+   const pts=[...activeTouches.values()];
+   pinchStartDistance=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y)||1;
+   pinchStartZoom=cameraDistance;lookPointer=null;lastLook=null;
+  }else if(activeTouches.size===1){lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY}}
  });
  renderer.domElement.addEventListener('pointermove',e=>{
+  if(!activeTouches.has(e.pointerId))return;
+  activeTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(activeTouches.size>=2){
+   const pts=[...activeTouches.values()];
+   const distance=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y)||1;
+   cameraDistance=THREE.MathUtils.clamp(pinchStartZoom*pinchStartDistance/distance,5,16);
+   return;
+  }
   if(e.pointerId!==lookPointer||!lastLook)return;
   const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;
   cameraYaw-=dx*.008;cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.004,-.25,.65);
   lastLook={x:e.clientX,y:e.clientY};
  });
- function end(e){if(e.pointerId===lookPointer){lookPointer=null;lastLook=null}}
+ function end(e){
+  activeTouches.delete(e.pointerId);
+  if(activeTouches.size===1){
+   const remaining=[...activeTouches.entries()][0];lookPointer=remaining[0];lastLook={x:remaining[1].x,y:remaining[1].y};
+  }else{lookPointer=null;lastLook=null}
+  if(activeTouches.size<2){pinchStartDistance=0;pinchStartZoom=cameraDistance}
+ }
  renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);
 }
 function setupControls(){
@@ -518,6 +552,18 @@ function setupControls(){
  $('dodge').addEventListener('pointerdown',e=>{e.preventDefault();dodge()});
  $('inventoryButton').addEventListener('pointerdown',e=>{e.preventDefault();openInventory()});
  $('closeInventory').addEventListener('click',closeInventory);
+ $('fullScreenButton').addEventListener('pointerdown',async e=>{
+  e.preventDefault();
+  try{
+   if(document.fullscreenElement){await document.exitFullscreen();return}
+   if(document.documentElement.requestFullscreen){await document.documentElement.requestFullscreen()}
+   else showMessage('FOR FULL SCREEN, ADD ECLIPSE TO YOUR HOME SCREEN',3);
+  }catch(error){showMessage('FULL SCREEN IS NOT AVAILABLE IN THIS BROWSER',3)}
+ });
+ document.addEventListener('fullscreenchange',()=>{
+  $('fullScreenButton').textContent=document.fullscreenElement?'EXIT FULL':'FULL SCREEN';
+  if(renderer&&camera){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+ });
  window.addEventListener('keydown',e=>{
   keys[e.code]=true;if(e.code==='KeyQ')nova();if(e.code==='ShiftLeft'||e.code==='ShiftRight')dodge();
   if(e.code==='KeyI')openInventory();if(e.code==='Space')e.preventDefault();
