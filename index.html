@@ -5955,6 +5955,469 @@ document.title = 'ECLIPSE — Worlds Beyond 0.24';
 
 console.log('ECLIPSE 0.24 — COMPANION DRONE LOADED');
 
+/* =========================================
+   ECLIPSE 0.25 — COMPANION EVOLUTION
+   + MOBILE HUD REFINEMENT
+   ========================================= */
+
+// DRONE PROGRESSION
+let droneClass25 = 'assault';
+let droneMode25 = 'aggressive';
+let droneSupportTimer25 = 0;
+
+const originalRefreshDrone25 = refreshDronePanel24;
+
+dronePanel24.insertAdjacentHTML('beforeend',`
+  <div style="margin-top:14px;border-top:1px solid #315565;padding-top:12px">
+    <div style="color:#75dce8;font-size:11px;font-weight:bold;margin-bottom:8px">
+      DRONE CLASS
+    </div>
+    <div id="droneClasses25" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+      <button data-class="assault">ASSAULT</button>
+      <button data-class="guardian">GUARDIAN</button>
+      <button data-class="support">SUPPORT</button>
+    </div>
+    <div style="color:#75dce8;font-size:11px;font-weight:bold;margin:13px 0 8px">
+      COMMAND MODE
+    </div>
+    <div id="droneModes25" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+      <button data-mode="follow">FOLLOW</button>
+      <button data-mode="aggressive">ATTACK</button>
+      <button data-mode="defensive">DEFEND</button>
+    </div>
+    <p id="droneInfo25" style="font-size:11px;color:#b5dce8;line-height:1.5;margin-top:10px"></p>
+  </div>
+`);
+
+const droneChoiceStyle25 = document.createElement('style');
+droneChoiceStyle25.textContent = `
+#dronePanel24 [data-class],
+#dronePanel24 [data-mode] {
+  padding:9px 3px;
+  border:1px solid #426575;
+  border-radius:6px;
+  background:#10232d;
+  color:#b9d9e2;
+  font-size:9px;
+  font-weight:900;
+}
+#dronePanel24 [data-class].selected,
+#dronePanel24 [data-mode].selected {
+  background:#18556a;
+  border-color:#58eaff;
+  color:white;
+  box-shadow:0 0 9px #39d8ee55;
+}
+`;
+document.head.appendChild(droneChoiceStyle25);
+
+function refreshDronePanel25() {
+  originalRefreshDrone25();
+
+  document.querySelectorAll('#droneClasses25 button')
+    .forEach(button => {
+      button.classList.toggle(
+        'selected',
+        button.dataset.class === droneClass25
+      );
+    });
+
+  document.querySelectorAll('#droneModes25 button')
+    .forEach(button => {
+      button.classList.toggle(
+        'selected',
+        button.dataset.mode === droneMode25
+      );
+    });
+
+  const descriptions = {
+    assault:'ASSAULT: Drone deals 50% additional damage.',
+    guardian:'GUARDIAN: Reduces incoming damage while active.',
+    support:'SUPPORT: Restores 6 health periodically.',
+  };
+
+  const modes = {
+    follow:'Follows you without attacking.',
+    aggressive:'Automatically attacks nearby enemies.',
+    defensive:'Attacks only enemies within close range.'
+  };
+
+  document.getElementById('droneInfo25').textContent =
+    descriptions[droneClass25] + ' ' + modes[droneMode25];
+}
+
+document.getElementById('droneClasses25')
+  .addEventListener('click',event => {
+    const button = event.target.closest('[data-class]');
+    if (!button || !droneUnlocked24) return;
+
+    droneClass25 = button.dataset.class;
+    refreshDronePanel25();
+    saveGame();
+  });
+
+document.getElementById('droneModes25')
+  .addEventListener('click',event => {
+    const button = event.target.closest('[data-mode]');
+    if (!button || !droneUnlocked24) return;
+
+    droneMode25 = button.dataset.mode;
+    refreshDronePanel25();
+    saveGame();
+  });
+
+// Keep original drone damage and add class behavior.
+const originalDroneFire25 = fireDrone24;
+
+fireDrone24 = function(target) {
+  if (!target || !droneUnlocked24) return;
+
+  if (droneMode25 === 'follow') return;
+
+  const distance = target.position.distanceTo(player.position);
+
+  if (droneMode25 === 'defensive' && distance > 9) return;
+
+  originalDroneFire25(target);
+
+  if (droneClass25 === 'assault') {
+    damageEnemy(target,5 + droneRank24 * 2);
+  }
+};
+
+// Guardian protection.
+const originalEnemyUpdate25 = updateEnemies;
+
+updateEnemies = function(dt) {
+  const oldArmor = skills.armor;
+
+  if (droneUnlocked24 && droneClass25 === 'guardian') {
+    skills.armor = oldArmor + 1;
+  }
+
+  originalEnemyUpdate25(dt);
+
+  skills.armor = oldArmor;
+};
+
+const originalProjectileUpdate25 = updateProjectiles;
+
+updateProjectiles = function(dt) {
+  const oldArmor = skills.armor;
+
+  if (droneUnlocked24 && droneClass25 === 'guardian') {
+    skills.armor = oldArmor + 1;
+  }
+
+  originalProjectileUpdate25(dt);
+
+  skills.armor = oldArmor;
+};
+
+// Support healing.
+const originalDroneUpdate25 = updateDrone24;
+
+updateDrone24 = function(dt) {
+  originalDroneUpdate25(dt);
+
+  if (!droneUnlocked24 ||
+      droneClass25 !== 'support' ||
+      health >= maxHealth) return;
+
+  droneSupportTimer25 += dt;
+
+  if (droneSupportTimer25 >= 12) {
+    droneSupportTimer25 = 0;
+    health = Math.min(maxHealth,health+6);
+    updateHUD();
+  }
+};
+
+// Refresh expanded drone information.
+refreshDronePanel24 = refreshDronePanel25;
+
+const originalRenderInventory25 = renderInventory;
+
+renderInventory = function() {
+  originalRenderInventory25();
+  refreshDronePanel25();
+};
+
+// Save class and command choices.
+const originalSaveGame25 = saveGame;
+
+saveGame = function() {
+  originalSaveGame25();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+    data.droneClass25 = droneClass25;
+    data.droneMode25 = droneMode25;
+
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  } catch(err) {}
+};
+
+// Restore drone choices.
+const originalLoadGame25 = loadGame;
+
+loadGame = function() {
+  const result = originalLoadGame25();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+
+    if (raw) {
+      const data = JSON.parse(raw);
+
+      if (['assault','guardian','support'].includes(data.droneClass25)) {
+        droneClass25 = data.droneClass25;
+      }
+
+      if (['follow','aggressive','defensive'].includes(data.droneMode25)) {
+        droneMode25 = data.droneMode25;
+      }
+    }
+  } catch(err) {}
+
+  refreshDronePanel25();
+  return result;
+};
+
+// Reset new choices for a new adventure.
+const originalStartGame25 = startGame;
+
+startGame = function(newGame=false) {
+  if (newGame) {
+    droneClass25 = 'assault';
+    droneMode25 = 'aggressive';
+    droneSupportTimer25 = 0;
+  }
+
+  originalStartGame25(newGame);
+  refreshDronePanel25();
+};
+
+// =========================================
+// MOBILE HUD REFINEMENT
+// =========================================
+
+const hudStyle25 = document.createElement('style');
+
+hudStyle25.textContent = `
+/* Remove obsolete top-left information panel. */
+#hud .hudPanel {
+  display:none !important;
+}
+
+/* Compact health and experience display. */
+#bottomStatus11 {
+  position:fixed !important;
+  top:9px !important;
+  bottom:auto !important;
+  left:50% !important;
+  right:auto !important;
+  transform:translateX(-50%);
+  width:145px !important;
+  height:auto !important;
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:4px !important;
+  z-index:28 !important;
+}
+
+#bottomStatus11 .statusCell11 {
+  padding:5px 7px;
+  border:1px solid #426475;
+  background:rgba(5,14,23,.9);
+}
+
+#bottomStatus11 .statusLabel11 {
+  font-size:8px;
+  margin-bottom:3px;
+}
+
+#bottomStatus11 .statusTrack11 {
+  height:5px;
+}
+
+#bottomLevel11 {
+  display:none !important;
+}
+
+/* Keep resources below the compact status. */
+#resourceDisplay22 {
+  top:68px !important;
+  font-size:8px !important;
+  padding:6px 8px !important;
+}
+
+/* Compact consumable controls. */
+#consumableDock23 {
+  top:96px !important;
+  width:min(94%,340px) !important;
+  gap:4px !important;
+}
+
+#consumableDock23 button {
+  padding:7px 3px !important;
+  font-size:8px !important;
+}
+
+/* Boost information beneath consumables. */
+#consumableStatus23 {
+  top:128px !important;
+  font-size:8px !important;
+}
+
+/* Smaller tactical radar. */
+#miniMap17 {
+  top:8px !important;
+  right:7px !important;
+  width:82px !important;
+  height:82px !important;
+}
+
+#miniLabel17 {
+  top:83px !important;
+  font-size:7px !important;
+}
+
+/* Collapsible objective tracker. */
+#objectiveTracker18 {
+  top:8px !important;
+  left:7px !important;
+  width:112px !important;
+  padding:7px !important;
+  pointer-events:auto !important;
+  max-height:110px;
+  overflow:hidden;
+  transition:max-height .2s;
+}
+
+#objectiveTracker18.collapsed25 {
+  max-height:25px;
+}
+
+#objectiveTracker18 .trackerTitle18 {
+  cursor:pointer;
+  font-size:9px;
+  margin:0;
+}
+
+#objectiveTracker18 .trackerSection18 {
+  font-size:8px;
+}
+
+#objectiveTracker18 .trackerText18 {
+  font-size:8px;
+  line-height:1.35;
+}
+
+/* Better combat control spacing. */
+#controls {
+  bottom:10px !important;
+  padding:0 8px !important;
+  align-items:flex-end !important;
+}
+
+#stickArea {
+  width:92px !important;
+  height:92px !important;
+}
+
+#stick {
+  width:46px !important;
+  height:46px !important;
+  left:21px !important;
+  top:21px !important;
+}
+
+.actions {
+  grid-template-columns:repeat(3,52px) !important;
+  grid-template-rows:repeat(2,49px) !important;
+  gap:5px !important;
+}
+
+.action {
+  width:52px !important;
+  height:49px !important;
+  border-radius:12px !important;
+  font-size:8px !important;
+  letter-spacing:0 !important;
+  box-shadow:0 3px 8px #0009;
+}
+
+/* Move boss health away from top information. */
+#bossBar {
+  top:150px !important;
+  width:min(75%,320px) !important;
+}
+
+/* Mining interaction stays above controls. */
+#mineButton22 {
+  bottom:155px !important;
+}
+
+/* Small phone layout. */
+@media(max-width:360px) {
+  #bottomStatus11 {
+    width:125px !important;
+  }
+
+  #miniMap17 {
+    width:72px !important;
+    height:72px !important;
+  }
+
+  #miniLabel17 {
+    top:73px !important;
+  }
+
+  #objectiveTracker18 {
+    width:100px !important;
+  }
+
+  .actions {
+    grid-template-columns:repeat(3,47px) !important;
+    grid-template-rows:repeat(2,45px) !important;
+    gap:4px !important;
+  }
+
+  .action {
+    width:47px !important;
+    height:45px !important;
+    font-size:7px !important;
+  }
+}
+`;
+
+document.head.appendChild(hudStyle25);
+
+// Make objectives collapsible.
+const objectiveTitle25 =
+  document.querySelector('#objectiveTracker18 .trackerTitle18');
+
+if (objectiveTitle25) {
+  objectiveTitle25.textContent = 'OBJECTIVES  ▾';
+
+  objectiveTitle25.addEventListener('click',() => {
+    tracker18.classList.toggle('collapsed25');
+
+    objectiveTitle25.textContent =
+      tracker18.classList.contains('collapsed25')
+        ? 'OBJECTIVES  ▸'
+        : 'OBJECTIVES  ▾';
+  });
+}
+
+document.title = 'ECLIPSE — Worlds Beyond 0.25';
+
+console.log('ECLIPSE 0.25 — COMPANION EVOLUTION & HUD LOADED');
+
 </script>
 </body>
 </html>
