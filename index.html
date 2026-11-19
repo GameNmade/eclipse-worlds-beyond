@@ -426,7 +426,7 @@ function updatePlayer(dt){
   x/=Math.max(1,len);z/=Math.max(1,len);
   const sin=Math.sin(cameraYaw),cos=Math.cos(cameraYaw);
   const worldX=x*cos+z*sin,worldZ=-x*sin+z*cos;
-  const speed=dodgeTime>0?25:7;
+  const speed=dodgeTime>0?25:((keys.ShiftLeft||keys.ShiftRight||Math.hypot(joystick.x,joystick.y)>.88)?11:7);
   player.position.x+=worldX*speed*dt;player.position.z+=worldZ*speed*dt;
   player.rotation.y=Math.atan2(-worldX,-worldZ);
  }
