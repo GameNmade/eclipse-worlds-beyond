@@ -4163,6 +4163,234 @@ document.title = 'ECLIPSE — Worlds Beyond 0.19';
 
 console.log('ECLIPSE 0.19 — EXPLORATION & DISCOVERY LOADED');
 
+/* =========================================
+   ECLIPSE 0.20 — EXPLORER'S CODEX
+   ========================================= */
+
+const codexLore20 = {
+  frontier: [
+    'THE FORGOTTEN RELAY',
+    'An abandoned communication station. Its final signal still echoes across the wasteland.',
+    'ANCIENT WATCHTOWER',
+    'A defensive structure built by an unknown civilization. Something once watched the stars from here.'
+  ],
+  ashen: [
+    'THE EMBER SHRINE',
+    'A monument surrounded by volcanic fire. Ancient energy remains trapped inside.',
+    'BURNT EXPEDITION',
+    'The remains of an expedition that ventured too far into the Ashen Wilds.'
+  ],
+  frost: [
+    'THE FROST ALTAR',
+    'An ancient altar preserved beneath centuries of ice.',
+    'CRYSTAL SANCTUM',
+    'A crystalline structure that appears to resonate with the frozen landscape.'
+  ],
+  verdant: [
+    'THE OVERGROWN TEMPLE',
+    'A forgotten temple reclaimed by an aggressive alien ecosystem.',
+    'ANCIENT ROOT COMPLEX',
+    'A mysterious underground network connected to the planet itself.'
+  ]
+};
+
+const codexButton20 = document.createElement('button');
+codexButton20.id = 'codexButton20';
+codexButton20.textContent = 'EXPLORER CODEX';
+
+document.querySelector('#worldMap08 .worldPanel08')
+  .insertBefore(
+    codexButton20,
+    document.getElementById('closeWorldMap08')
+  );
+
+const codexStyle20 = document.createElement('style');
+
+codexStyle20.textContent = `
+#codexButton20 {
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  background:linear-gradient(120deg,#263d4b,#182c38);
+  border:1px solid #65c9d9;
+  border-radius:8px;
+  color:#8deaff;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+#codexPanel20 {
+  position:fixed;
+  inset:0;
+  z-index:120;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(0,0,0,.88);
+  font-family:Arial,sans-serif;
+}
+
+#codexPanel20 .codexWindow20 {
+  width:100%;
+  max-width:440px;
+  max-height:85%;
+  overflow-y:auto;
+  padding:18px;
+  border:1px solid #55bed0;
+  border-radius:12px;
+  background:linear-gradient(145deg,#172630,#070c13);
+  color:#e5f1f5;
+  box-shadow:0 0 30px #38b8d333;
+}
+
+#codexPanel20 h2 {
+  color:#83e8f3;
+  letter-spacing:3px;
+  font-size:19px;
+}
+
+.codexProgress20 {
+  padding:12px;
+  margin:12px 0;
+  border:1px solid #526b79;
+  border-radius:8px;
+  background:#0b151e;
+}
+
+.codexRegion20 {
+  color:#e9c47c;
+  font-weight:900;
+  letter-spacing:2px;
+  margin-top:17px;
+}
+
+.codexEntry20 {
+  padding:10px;
+  margin-top:7px;
+  border-left:3px solid #426273;
+  background:#101d28;
+  font-size:12px;
+  line-height:1.5;
+}
+
+.codexFound20 {
+  border-left-color:#55e5ba;
+}
+
+.codexUnknown20 {
+  color:#82919b;
+}
+
+.codexEntry20 strong {
+  display:block;
+  color:#d9edf2;
+  margin-bottom:4px;
+}
+
+#codexClose20 {
+  width:100%;
+  margin-top:16px;
+  padding:13px;
+  background:#254453;
+  border:1px solid #65c9d9;
+  color:white;
+  border-radius:8px;
+  font-weight:900;
+}
+`;
+
+document.head.appendChild(codexStyle20);
+
+const codexPanel20 = document.createElement('div');
+codexPanel20.id = 'codexPanel20';
+
+codexPanel20.innerHTML = `
+  <div class="codexWindow20">
+    <h2>EXPLORER'S CODEX</h2>
+    <p>ARCHIVE OF DISCOVERED WORLDS</p>
+    <div class="codexProgress20" id="codexProgress20"></div>
+    <div id="codexEntries20"></div>
+    <button id="codexClose20">RETURN TO WORLD ATLAS</button>
+  </div>
+`;
+
+document.body.appendChild(codexPanel20);
+
+function refreshCodex20() {
+  const total = 8;
+  const found = discoveredSites19.length;
+
+  document.getElementById('codexProgress20').innerHTML =
+    '<strong>UNIVERSE EXPLORATION</strong>' +
+    '<div style="font-size:25px;color:#7ce7f2;margin:7px 0">' +
+    found + ' / ' + total +
+    '</div>' +
+    '<div style="height:8px;background:#26333d;border-radius:8px;overflow:hidden">' +
+    '<div style="height:100%;width:' +
+    (found / total * 100) +
+    '%;background:#55d9c8"></div></div>' +
+    '<small style="color:#aabac2">' +
+    Math.round(found / total * 100) +
+    '% of known locations discovered</small>';
+
+  const container = document.getElementById('codexEntries20');
+  container.innerHTML = '';
+
+  const regionNames = {
+    frontier:'THE FRONTIER',
+    ashen:'ASHEN WILDS',
+    frost:'FROSTFALL EXPANSE',
+    verdant:'VERDANT REACH'
+  };
+
+  for (const region of Object.keys(codexLore20)) {
+    const heading = document.createElement('div');
+    heading.className = 'codexRegion20';
+    heading.textContent = regionNames[region];
+    container.appendChild(heading);
+
+    const lore = codexLore20[region];
+
+    for (let i = 0; i < 2; i++) {
+      const id = region + '_' + i;
+      const isFound = discoveredSites19.includes(id);
+
+      const entry = document.createElement('div');
+      entry.className = 'codexEntry20 ' +
+        (isFound ? 'codexFound20' : 'codexUnknown20');
+
+      const name = document.createElement('strong');
+      name.textContent = isFound ? lore[i*2] : 'UNKNOWN LOCATION';
+
+      const description = document.createElement('span');
+      description.textContent = isFound
+        ? lore[i*2+1]
+        : 'Explore this region to uncover its secrets.';
+
+      entry.appendChild(name);
+      entry.appendChild(description);
+      container.appendChild(entry);
+    }
+  }
+}
+
+codexButton20.addEventListener('click', () => {
+  refreshCodex20();
+  worldMap08.style.display = 'none';
+  codexPanel20.style.display = 'flex';
+});
+
+document.getElementById('codexClose20')
+  .addEventListener('click', () => {
+    codexPanel20.style.display = 'none';
+    worldMap08.style.display = 'flex';
+  });
+
+document.title = 'ECLIPSE — Worlds Beyond 0.20';
+
+console.log('ECLIPSE 0.20 — EXPLORER CODEX LOADED');
+
 </script>
 </body>
 </html>
