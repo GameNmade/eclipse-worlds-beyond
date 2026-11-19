@@ -63,6 +63,14 @@ h1{font-size:clamp(48px,12vw,82px);letter-spacing:9px;margin:0;color:#eee;text-s
 .item button{float:right;padding:6px 9px;font-size:10px}
 .common{color:#ccc}.uncommon{color:#55d78a}.rare{color:#55baff}.epic{color:#c18aff}.legendary{color:#ffb84d}
 #closeInventory{background:#54242e}
+#inventory{padding:7px}
+.invPanel{width:min(99%,760px);max-height:94%;padding:18px}
+#bag{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;max-height:38vh;overflow-y:auto;padding:2px}
+.item{margin-top:0;min-width:0;padding:13px;border-radius:8px;background:linear-gradient(135deg,#191923,#101018)}
+.item strong{display:inline-block;max-width:72%;overflow-wrap:anywhere}
+.item button{float:right;margin-left:6px}
+.slot{min-width:0;overflow-wrap:anywhere}
+@media(max-width:380px){.invPanel{padding:12px}.invHeader h2{font-size:16px;letter-spacing:2px}.stats{gap:5px}.stat{padding:7px 4px}.slots{gap:5px}.slot{padding:7px;min-height:78px}}
 #help{position:fixed;z-index:4;bottom:5px;left:50%;transform:translateX(-50%);font-size:9px;color:#aaa;white-space:nowrap;pointer-events:none;display:none}
 @media(max-width:380px){
  #stickArea{width:112px;height:112px}
