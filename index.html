@@ -5650,6 +5650,311 @@ openCrafting22 = function() {
 
 console.log('ECLIPSE 0.23 — CRAFTING DISPLAY FIX LOADED');
 
+/* =========================================
+   ECLIPSE 0.24 — COMPANION COMBAT DRONE
+   ========================================= */
+
+let droneUnlocked24 = false;
+let droneRank24 = 0;
+let drone24 = null;
+let droneCooldown24 = 0;
+
+function createDrone24() {
+  if (drone24 || !scene) return;
+
+  drone24 = new THREE.Group();
+
+  const shell = new THREE.MeshStandardMaterial({
+    color: 0x263b50,
+    metalness: 0.85,
+    roughness: 0.25,
+    emissive: 0x073b58,
+    emissiveIntensity: 1
+  });
+
+  const glow = new THREE.MeshBasicMaterial({
+    color: 0x39eaff
+  });
+
+  const core = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.42,1),
+    glow
+  );
+  drone24.add(core);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.62,0.055,8,32),
+    glow
+  );
+  ring.rotation.x = Math.PI / 2;
+  drone24.add(ring);
+
+  const left = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55,0.12,0.2),
+    shell
+  );
+  left.position.x = -0.65;
+  drone24.add(left);
+
+  const right = left.clone();
+  right.position.x = 0.65;
+  drone24.add(right);
+
+  const eye = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12,12,12),
+    glow
+  );
+  eye.position.set(0,0,-0.4);
+  drone24.add(eye);
+
+  scene.add(drone24);
+
+  drone24.position.set(
+    player.position.x + 1.5,
+    2.5,
+    player.position.z + 1
+  );
+}
+
+function fireDrone24(target) {
+  if (!target || !target.parent) return;
+
+  const start = drone24.position.clone();
+  const end = target.position.clone();
+  end.y += 1;
+
+  const direction = end.clone().sub(start);
+  const distance = direction.length();
+
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.045,0.045,distance,6),
+    new THREE.MeshBasicMaterial({
+      color: 0x45eaff,
+      transparent: true,
+      opacity: 1
+    })
+  );
+
+  beam.position.copy(start).add(end).multiplyScalar(0.5);
+  beam.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0,1,0),
+    direction.normalize()
+  );
+
+  scene.add(beam);
+  effects.push({mesh:beam,life:0.16,max:0.16});
+
+  const damage = 9 + droneRank24 * 5;
+  damageEnemy(target,damage);
+}
+
+function updateDrone24(dt) {
+  if (!droneUnlocked24 || !player || !scene) return;
+
+  if (!drone24) createDrone24();
+  if (!drone24) return;
+
+  const bob = Math.sin(clock.elapsedTime * 2.5) * 0.18;
+
+  const desired = new THREE.Vector3(
+    player.position.x + 1.5,
+    2.5 + bob,
+    player.position.z + 1
+  );
+
+  drone24.position.lerp(desired,Math.min(1,dt*5));
+  drone24.rotation.y += dt * 1.2;
+
+  droneCooldown24 -= dt;
+  if (droneCooldown24 > 0) return;
+
+  let target = null;
+  let nearest = 17;
+
+  for (const enemy of enemies) {
+    if (!enemy.parent) continue;
+
+    const distance = enemy.position.distanceTo(player.position);
+
+    if (distance < nearest) {
+      nearest = distance;
+      target = enemy;
+    }
+  }
+
+  if (boss && boss.parent) {
+    const distance = boss.position.distanceTo(player.position);
+
+    if (distance < nearest) {
+      nearest = distance;
+      target = boss;
+    }
+  }
+
+  if (target) {
+    fireDrone24(target);
+    droneCooldown24 = Math.max(0.65,1.5-droneRank24*0.15);
+  }
+}
+
+// Drone controls inside the Explorer Armory.
+const dronePanel24 = document.createElement('div');
+dronePanel24.id = 'dronePanel24';
+dronePanel24.style.cssText =
+  'margin-top:20px;padding:14px;border:1px solid #278ba5;' +
+  'border-radius:12px;background:rgba(5,20,32,.92);';
+
+dronePanel24.innerHTML =
+  '<h3 style="color:#55eaff;letter-spacing:2px">COMPANION DRONE</h3>' +
+  '<p id="droneStatus24" style="color:#b5dce8;font-size:12px"></p>' +
+  '<button id="droneAction24" style="width:100%;padding:12px;' +
+  'background:#12536b;color:white;border:1px solid #45eaff;' +
+  'border-radius:8px;font-weight:bold"></button>';
+
+document.getElementById('inventory')
+  .querySelector('.invPanel')
+  .appendChild(dronePanel24);
+
+function refreshDronePanel24() {
+  const status = document.getElementById('droneStatus24');
+  const button = document.getElementById('droneAction24');
+
+  if (!status || !button) return;
+
+  if (!droneUnlocked24) {
+    status.textContent =
+      'A combat support drone that follows you and attacks nearby enemies.';
+
+    button.textContent = 'UNLOCK DRONE — 40 SHARDS';
+    button.disabled = shards < 40;
+    return;
+  }
+
+  status.textContent =
+    'DRONE ACTIVE — RANK ' + droneRank24 +
+    ' / 3 — DAMAGE ' + (9 + droneRank24 * 5);
+
+  if (droneRank24 >= 3) {
+    button.textContent = 'MAXIMUM RANK REACHED';
+    button.disabled = true;
+  } else {
+    const cost = [30,55,80][droneRank24];
+    button.textContent =
+      'UPGRADE DRONE — ' + cost + ' SHARDS';
+    button.disabled = shards < cost;
+  }
+}
+
+document.getElementById('droneAction24')
+  .addEventListener('click',() => {
+    if (!droneUnlocked24) {
+      if (shards < 40) return;
+
+      shards -= 40;
+      droneUnlocked24 = true;
+      createDrone24();
+
+      showMessage('COMPANION DRONE UNLOCKED',3);
+    } else {
+      if (droneRank24 >= 3) return;
+
+      const cost = [30,55,80][droneRank24];
+      if (shards < cost) return;
+
+      shards -= cost;
+      droneRank24++;
+
+      showMessage('DRONE UPGRADED — RANK '+droneRank24,2.5);
+    }
+
+    refreshDronePanel24();
+    updateHUD();
+    saveGame();
+  });
+
+// Refresh drone panel whenever inventory opens or updates.
+const originalRenderInventory24 = renderInventory;
+
+renderInventory = function() {
+  originalRenderInventory24();
+  refreshDronePanel24();
+};
+
+// Add drone behavior to the existing enemy update.
+const originalUpdateEnemies24 = updateEnemies;
+
+updateEnemies = function(dt) {
+  originalUpdateEnemies24(dt);
+  updateDrone24(dt);
+};
+
+// Save drone ownership and upgrades.
+const originalSaveGame24 = saveGame;
+
+saveGame = function() {
+  originalSaveGame24();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+    data.droneUnlocked24 = droneUnlocked24;
+    data.droneRank24 = droneRank24;
+
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  } catch(err) {}
+};
+
+// Restore drone ownership and upgrades.
+const originalLoadGame24 = loadGame;
+
+loadGame = function() {
+  const result = originalLoadGame24();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+
+    if (raw) {
+      const data = JSON.parse(raw);
+
+      droneUnlocked24 = !!data.droneUnlocked24;
+      droneRank24 = Math.min(3,Math.max(
+        0,Number(data.droneRank24)||0
+      ));
+    }
+  } catch(err) {}
+
+  return result;
+};
+
+// Reset drone on New Game.
+const originalStartGame24 = startGame;
+
+startGame = function(newGame=false) {
+  if (newGame) {
+    droneUnlocked24 = false;
+    droneRank24 = 0;
+    droneCooldown24 = 0;
+
+    if (drone24 && drone24.parent) {
+      drone24.parent.remove(drone24);
+    }
+
+    drone24 = null;
+  }
+
+  originalStartGame24(newGame);
+
+  if (started && droneUnlocked24) {
+    createDrone24();
+  }
+};
+
+document.title = 'ECLIPSE — Worlds Beyond 0.24';
+
+console.log('ECLIPSE 0.24 — COMPANION DRONE LOADED');
+
 </script>
 </body>
 </html>
