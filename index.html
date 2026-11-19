@@ -5631,6 +5631,25 @@ document.title = 'ECLIPSE — Worlds Beyond 0.23';
 
 console.log('ECLIPSE 0.23 — ADVANCED CRAFTING LOADED');
 
+// ECLIPSE 0.23 — CRAFTING DISPLAY FIX
+
+const originalOpenCrafting23 = openCrafting22;
+
+openCrafting22 = function() {
+  originalOpenCrafting23();
+
+  const section = document.getElementById('advancedRecipes23');
+  const recipes = document.getElementById('craftRecipes22');
+
+  if (section && recipes) {
+    recipes.insertAdjacentElement('afterend',section);
+    section.style.display = 'block';
+    section.style.visibility = 'visible';
+  }
+};
+
+console.log('ECLIPSE 0.23 — CRAFTING DISPLAY FIX LOADED');
+
 </script>
 </body>
 </html>
