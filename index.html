@@ -4391,6 +4391,162 @@ document.title = 'ECLIPSE — Worlds Beyond 0.20';
 
 console.log('ECLIPSE 0.20 — EXPLORER CODEX LOADED');
 
+/* =========================================
+   ECLIPSE 0.21 — EQUIPMENT FORGE
+   ========================================= */
+
+const forgeStyle21 = document.createElement('style');
+
+forgeStyle21.textContent = `
+.forgeButton21 {
+  display:inline-block;
+  margin:6px 4px 4px 0;
+  padding:9px 11px;
+  border:1px solid #c69a4d !important;
+  border-radius:6px !important;
+  background:linear-gradient(135deg,#49341b,#211b16) !important;
+  color:#ffe0a0 !important;
+  font-size:10px !important;
+  font-weight:900 !important;
+  letter-spacing:1px;
+}
+
+.forgeButton21:disabled {
+  opacity:.4;
+}
+
+.forgeInfo21 {
+  color:#e6c47e;
+  font-size:10px;
+  margin-top:5px;
+}
+`;
+
+document.head.appendChild(forgeStyle21);
+
+const forgeRarityCost21 = {
+  common:1,
+  uncommon:1.2,
+  rare:1.5,
+  epic:2,
+  legendary:3
+};
+
+function forgeCost21(item) {
+  const rank = item.forgeRank21 || 0;
+  return Math.floor(
+    12 * (rank+1) *
+    (forgeRarityCost21[item.rarity] || 1)
+  );
+}
+
+function upgradeItem21(item) {
+  const rank = item.forgeRank21 || 0;
+
+  if (rank >= 5) {
+    showMessage('MAXIMUM UPGRADE REACHED',1.5);
+    return;
+  }
+
+  const cost = forgeCost21(item);
+
+  if (shards < cost) {
+    showMessage('NOT ENOUGH ENERGY SHARDS — NEED '+cost,2);
+    return;
+  }
+
+  shards -= cost;
+  item.forgeRank21 = rank+1;
+
+  if (item.type === 'Weapon') {
+    item.damage += 3;
+  } else {
+    item.armor += 2;
+  }
+
+  recalculateStats();
+  saveGame();
+  renderInventory();
+
+  showMessage(
+    item.name+' UPGRADED TO +'+item.forgeRank21+
+    ' · '+cost+' SHARDS USED',
+    2.5
+  );
+}
+
+function makeForgeButton21(item) {
+  const button = document.createElement('button');
+  const rank = item.forgeRank21 || 0;
+  const cost = forgeCost21(item);
+
+  button.className = 'forgeButton21';
+  button.type = 'button';
+
+  button.textContent = rank >= 5
+    ? 'MAX UPGRADE'
+    : 'UPGRADE +' + (rank+1) + ' · ' + cost + ' SHARDS';
+
+  button.disabled = rank >= 5 || shards < cost;
+
+  button.onclick = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    upgradeItem21(item);
+  };
+
+  return button;
+}
+
+// Add upgrade controls to equipped and backpack gear.
+const originalRenderInventory21 = renderInventory;
+
+renderInventory = function() {
+  originalRenderInventory21();
+
+  document.querySelectorAll('#gearSlots .slot').forEach((slot,index) => {
+    const type = gearTypes[index];
+    const item = equipped[type];
+
+    if (!item) return;
+
+    const button = makeForgeButton21(item);
+    slot.appendChild(button);
+
+    const info = document.createElement('div');
+    info.className = 'forgeInfo21';
+    info.textContent =
+      'FORGE RANK: '+(item.forgeRank21 || 0)+' / 5';
+
+    slot.appendChild(info);
+  });
+
+  document.querySelectorAll('#bag .item').forEach((row,index) => {
+    const item = bag[index];
+    if (!item) return;
+
+    const equipButton = row.querySelector('button');
+    const button = makeForgeButton21(item);
+
+    if (equipButton) {
+      equipButton.insertAdjacentElement('afterend',button);
+    } else {
+      row.appendChild(button);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'forgeInfo21';
+    info.textContent =
+      'FORGE RANK: '+(item.forgeRank21 || 0)+' / 5';
+
+    row.appendChild(info);
+  });
+};
+
+document.title = 'ECLIPSE — Worlds Beyond 0.21';
+
+console.log('ECLIPSE 0.21 — EQUIPMENT FORGE LOADED');
+
 </script>
 </body>
 </html>
