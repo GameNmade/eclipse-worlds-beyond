@@ -5159,6 +5159,478 @@ document.title='ECLIPSE — Worlds Beyond 0.22';
 
 console.log('ECLIPSE 0.22 — RESOURCE GATHERING & CRAFTING LOADED');
 
+/* =========================================
+   ECLIPSE 0.23 — ADVANCED CRAFTING
+   CONSUMABLES & TEMPORARY COMBAT BOOSTS
+   ========================================= */
+
+let damageBoost23 = 0;
+let armorBoost23 = 0;
+let damageBoostUntil23 = 0;
+let armorBoostUntil23 = 0;
+
+// Consumable interface.
+const style23 = document.createElement('style');
+style23.textContent = `
+#consumableDock23 {
+  position:fixed;
+  top:105px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:30;
+  display:none;
+  width:min(94%,390px);
+  gap:6px;
+  justify-content:center;
+  pointer-events:auto;
+}
+#consumableDock23 button {
+  flex:1;
+  min-width:0;
+  padding:9px 5px;
+  border:1px solid #6a9caa;
+  border-radius:7px;
+  background:linear-gradient(145deg,#18333e,#09141e);
+  color:#d9faff;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.5px;
+  text-shadow:0 0 8px #48d9ed;
+}
+#consumableDock23 button:disabled {
+  opacity:.35;
+}
+#consumableStatus23 {
+  position:fixed;
+  top:145px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:29;
+  color:#b9e9ee;
+  font:900 9px Arial;
+  text-align:center;
+  text-shadow:0 2px 5px #000;
+  pointer-events:none;
+}
+#advancedRecipes23 {
+  margin-top:14px;
+  padding-top:10px;
+  border-top:1px solid #52717d;
+}
+#advancedRecipes23 h3 {
+  color:#75dce8;
+  font-size:13px;
+  letter-spacing:2px;
+}
+.recipe23 {
+  padding:11px;
+  margin:9px 0;
+  border:1px solid #47717c;
+  border-radius:8px;
+  background:#0c1b25;
+}
+.recipe23 strong {
+  display:block;
+  color:#e9c77f;
+  margin-bottom:6px;
+}
+.recipe23 small {
+  display:block;
+  color:#a9c1ca;
+  line-height:1.5;
+  margin-bottom:8px;
+}
+.recipe23 button {
+  width:100%;
+  padding:10px;
+  border:1px solid #63cbd4;
+  border-radius:6px;
+  background:#173d49;
+  color:#d4fbff;
+  font-weight:900;
+}
+.recipe23 button:disabled {
+  opacity:.35;
+}
+`;
+document.head.appendChild(style23);
+
+// Quick-use controls.
+const dock23 = document.createElement('div');
+dock23.id = 'consumableDock23';
+
+dock23.innerHTML = `
+  <button id="useMedkit23">MEDKIT ×0</button>
+  <button id="useDamage23">DAMAGE BOOST ×0</button>
+  <button id="useArmor23">ARMOR BOOST ×0</button>
+`;
+
+document.body.appendChild(dock23);
+
+const status23 = document.createElement('div');
+status23.id = 'consumableStatus23';
+document.body.appendChild(status23);
+
+// Consumable effects.
+function updateConsumables23() {
+  if (!started) {
+    dock23.style.display = 'none';
+    status23.textContent = '';
+    return;
+  }
+
+  dock23.style.display = 'flex';
+
+  document.getElementById('useMedkit23').textContent =
+    'MEDKIT ×' + medkits09;
+
+  document.getElementById('useDamage23').textContent =
+    'DAMAGE BOOST ×' + damageBoost23;
+
+  document.getElementById('useArmor23').textContent =
+    'ARMOR BOOST ×' + armorBoost23;
+
+  document.getElementById('useMedkit23').disabled =
+    medkits09 <= 0 || health >= maxHealth;
+
+  document.getElementById('useDamage23').disabled =
+    damageBoost23 <= 0;
+
+  document.getElementById('useArmor23').disabled =
+    armorBoost23 <= 0;
+
+  const now = clock ? clock.elapsedTime : 0;
+  const messages = [];
+
+  if (damageBoostUntil23 > now) {
+    messages.push(
+      'DAMAGE BOOST ' +
+      (damageBoostUntil23-now).toFixed(0) + 's'
+    );
+  }
+
+  if (armorBoostUntil23 > now) {
+    messages.push(
+      'ARMOR BOOST ' +
+      (armorBoostUntil23-now).toFixed(0) + 's'
+    );
+  }
+
+  status23.textContent = messages.join('  |  ');
+}
+
+// Use a medkit.
+function useMedkit23() {
+  if (medkits09 <= 0 || health >= maxHealth) return;
+
+  medkits09--;
+  const before = health;
+  health = Math.min(maxHealth,health+50);
+
+  saveGame();
+  updateHUD();
+  updateConsumables23();
+
+  showMessage(
+    'MEDKIT USED — +' + Math.ceil(health-before) + ' HEALTH',
+    2
+  );
+}
+
+// Activate a 30-second damage boost.
+function useDamageBoost23() {
+  if (damageBoost23 <= 0) return;
+
+  damageBoost23--;
+  damageBoostUntil23 =
+    Math.max(clock.elapsedTime,damageBoostUntil23)+30;
+
+  saveGame();
+  updateConsumables23();
+  showMessage('WEAPON OVERDRIVE — DAMAGE INCREASED',2.5);
+}
+
+// Activate a 30-second armor boost.
+function useArmorBoost23() {
+  if (armorBoost23 <= 0) return;
+
+  armorBoost23--;
+  armorBoostUntil23 =
+    Math.max(clock.elapsedTime,armorBoostUntil23)+30;
+
+  saveGame();
+  updateConsumables23();
+  showMessage('AEGIS BOOST — DEFENSE INCREASED',2.5);
+}
+
+document.getElementById('useMedkit23')
+  .addEventListener('click',useMedkit23);
+
+document.getElementById('useDamage23')
+  .addEventListener('click',useDamageBoost23);
+
+document.getElementById('useArmor23')
+  .addEventListener('click',useArmorBoost23);
+
+// Crafting recipes and level requirements.
+const advancedRecipes23 = [
+  {
+    id:'medkit',
+    name:'COMBAT MEDKIT',
+    level:1,
+    description:'Adds one usable medkit. Restores 50 health.',
+    cost:{alloy:2,xenocrystal:1,voidEssence:0}
+  },
+  {
+    id:'damage',
+    name:'WEAPON OVERDRIVE',
+    level:5,
+    description:'Adds one damage booster. Increases weapon damage for 30 seconds.',
+    cost:{alloy:3,xenocrystal:2,voidEssence:1}
+  },
+  {
+    id:'armor',
+    name:'AEGIS DEFENSE BOOST',
+    level:8,
+    description:'Adds one armor booster. Reduces incoming damage for 30 seconds.',
+    cost:{alloy:3,xenocrystal:1,voidEssence:2}
+  },
+  {
+    id:'both',
+    name:'VOID COMBAT ELIXIR',
+    level:12,
+    description:'Adds one damage booster and one armor booster.',
+    cost:{alloy:4,xenocrystal:3,voidEssence:3}
+  }
+];
+
+function canCraft23(recipe) {
+  return level >= recipe.level &&
+    Object.keys(recipe.cost).every(
+      key => resources22[key] >= recipe.cost[key]
+    );
+}
+
+function craftAdvanced23(recipe) {
+  if (level < recipe.level) {
+    showMessage('REQUIRES LEVEL ' + recipe.level,2);
+    return;
+  }
+
+  if (!canCraft23(recipe)) {
+    showMessage('NOT ENOUGH MATERIALS',2);
+    return;
+  }
+
+  for (const key of Object.keys(recipe.cost)) {
+    resources22[key] -= recipe.cost[key];
+  }
+
+  if (recipe.id === 'medkit') {
+    medkits09++;
+  }
+
+  if (recipe.id === 'damage') {
+    damageBoost23++;
+  }
+
+  if (recipe.id === 'armor') {
+    armorBoost23++;
+  }
+
+  if (recipe.id === 'both') {
+    damageBoost23++;
+    armorBoost23++;
+  }
+
+  updateResources22();
+  refreshCrafting22();
+  updateConsumables23();
+  saveGame();
+
+  showMessage(recipe.name + ' CRAFTED',2.5);
+}
+
+// Preserve the original crafting station and add new recipes.
+const originalRefreshCrafting23 = refreshCrafting22;
+
+refreshCrafting22 = function() {
+  originalRefreshCrafting23();
+
+  let section = document.getElementById('advancedRecipes23');
+
+  if (!section) {
+    section = document.createElement('div');
+    section.id = 'advancedRecipes23';
+
+    document.getElementById('craftRecipes22')
+      .appendChild(section);
+  }
+
+  section.innerHTML = '<h3>ADVANCED CONSUMABLES</h3>';
+
+  for (const recipe of advancedRecipes23) {
+    const card = document.createElement('div');
+    card.className = 'recipe23';
+
+    const title = document.createElement('strong');
+    title.textContent = recipe.name;
+
+    const description = document.createElement('small');
+    description.textContent =
+      'LEVEL ' + recipe.level + ' REQUIRED — ' +
+      recipe.description + ' Materials: ' +
+      Object.keys(recipe.cost)
+        .filter(key => recipe.cost[key] > 0)
+        .map(key => recipe.cost[key] + ' ' + key)
+        .join(', ');
+
+    const button = document.createElement('button');
+
+    button.textContent =
+      level < recipe.level
+        ? 'LOCKED — LEVEL ' + recipe.level
+        : 'CRAFT';
+
+    button.disabled = !canCraft23(recipe);
+
+    button.addEventListener('click',() => {
+      craftAdvanced23(recipe);
+    });
+
+    card.append(title,description,button);
+    section.appendChild(card);
+  }
+};
+
+// Save consumables and active boost timers.
+const originalSaveGame23 = saveGame;
+
+saveGame = function() {
+  originalSaveGame23();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+
+    data.damageBoost23 = damageBoost23;
+    data.armorBoost23 = armorBoost23;
+    data.damageBoostRemaining23 = Math.max(
+      0,damageBoostUntil23-(clock ? clock.elapsedTime : 0)
+    );
+    data.armorBoostRemaining23 = Math.max(
+      0,armorBoostUntil23-(clock ? clock.elapsedTime : 0)
+    );
+
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  } catch(err) {}
+};
+
+const originalLoadGame23 = loadGame;
+
+loadGame = function() {
+  const result = originalLoadGame23();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+
+    if (raw) {
+      const data = JSON.parse(raw);
+
+      damageBoost23 = Math.max(0,Number(data.damageBoost23)||0);
+      armorBoost23 = Math.max(0,Number(data.armorBoost23)||0);
+
+      const now = clock ? clock.elapsedTime : 0;
+
+      damageBoostUntil23 =
+        now+Math.max(0,Number(data.damageBoostRemaining23)||0);
+
+      armorBoostUntil23 =
+        now+Math.max(0,Number(data.armorBoostRemaining23)||0);
+    }
+  } catch(err) {}
+
+  updateConsumables23();
+  return result;
+};
+
+// Reset new consumables when starting a New Game.
+const originalStartGame23 = startGame;
+
+startGame = function(newGame=false) {
+  if (newGame) {
+    damageBoost23 = 0;
+    armorBoost23 = 0;
+    damageBoostUntil23 = 0;
+    armorBoostUntil23 = 0;
+  }
+
+  originalStartGame23(newGame);
+
+  if (started) {
+    updateConsumables23();
+  }
+};
+
+// Apply temporary damage increase without changing permanent stats.
+const originalDamageEnemy23 = damageEnemy;
+
+damageEnemy = function(enemy,amount) {
+  const now = clock ? clock.elapsedTime : 0;
+
+  if (damageBoostUntil23 > now) {
+    amount *= 1.5;
+  }
+
+  originalDamageEnemy23(enemy,amount);
+};
+
+// Apply temporary armor to melee and boss attacks.
+const originalUpdateEnemies23 = updateEnemies;
+
+updateEnemies = function(dt) {
+  const now = clock ? clock.elapsedTime : 0;
+  const oldArmor = skills.armor;
+
+  if (armorBoostUntil23 > now) {
+    skills.armor = oldArmor + 2;
+  }
+
+  originalUpdateEnemies23(dt);
+
+  skills.armor = oldArmor;
+};
+
+// Apply temporary armor to incoming projectiles.
+const originalUpdateProjectiles23 = updateProjectiles;
+
+updateProjectiles = function(dt) {
+  const now = clock ? clock.elapsedTime : 0;
+  const oldArmor = skills.armor;
+
+  if (armorBoostUntil23 > now) {
+    skills.armor = oldArmor + 2;
+  }
+
+  originalUpdateProjectiles23(dt);
+
+  skills.armor = oldArmor;
+};
+
+// Keep consumable controls and boost timers refreshed.
+const originalUpdateHUD23 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD23();
+  updateConsumables23();
+};
+
+document.title = 'ECLIPSE — Worlds Beyond 0.23';
+
+console.log('ECLIPSE 0.23 — ADVANCED CRAFTING LOADED');
+
 </script>
 </body>
 </html>
