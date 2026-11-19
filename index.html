@@ -7540,40 +7540,7 @@ window.addEventListener('unhandledrejection', function(event) {
     }
   );
 })();
+  
 </script>
-<script>
-(function () {
-  function launch(newGame) {
-    try {
-      if (typeof window.startGame !== 'function') {
-        alert('STARTUP ERROR: The game script did not load correctly.');
-        return;
-      }
-
-      window.startGame(newGame);
-
-    } catch (error) {
-      alert('STARTUP ERROR: ' + error.message);
-      console.error(error);
-    }
-  }
-
-  document.getElementById('enterButton').addEventListener(
-    'pointerdown',
-    function (event) {
-      event.preventDefault();
-      launch(false);
-    }
-  );
-
-  document.getElementById('newGameButton').addEventListener(
-    'pointerdown',
-    function (event) {
-      event.preventDefault();
-      launch(true)
-    }
-  );
-})();
-</script> 
 </body>
 </html>
