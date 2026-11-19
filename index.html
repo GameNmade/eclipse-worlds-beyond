@@ -7494,6 +7494,53 @@ console.log('ECLIPSE 0.28 — ADVANCED ENEMY AI LOADED');
 window.startGame = startGame;
 window.__eclipseReady = true;
 </script>
+ <script>
+window.addEventListener('error', function(event) {
+  alert(
+    'GAME SCRIPT ERROR: ' +
+    (event.message || 'Unknown error') +
+    ' — Line: ' + (event.lineno || 'unknown')
+  );
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+  alert(
+    'GAME PROMISE ERROR: ' +
+    (event.reason?.message || event.reason || 'Unknown error')
+  );
+});
+
+(function () {
+  function launch(newGame) {
+    if (typeof window.startGame !== 'function') {
+      alert('STARTUP FUNCTION NOT AVAILABLE');
+      return;
+    }
+
+    try {
+      window.startGame(newGame);
+    } catch (error) {
+      alert('STARTUP ERROR: ' + error.message);
+    }
+  }
+
+  document.getElementById('enterButton').addEventListener(
+    'pointerdown',
+    function(event) {
+      event.preventDefault();
+      launch(false);
+    }
+  );
+
+  document.getElementById('newGameButton').addEventListener(
+    'pointerdown',
+    function(event) {
+      event.preventDefault();
+      launch(true);
+    }
+  );
+})();
+</script>
 <script>
 (function () {
   function launch(newGame) {
