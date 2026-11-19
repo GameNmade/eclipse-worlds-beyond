@@ -7833,6 +7833,273 @@ damageEnemy = function(target, amount) {
 document.title = 'ECLIPSE — Worlds Beyond 0.29';
 
 console.log('ECLIPSE 0.29 — WORLD BOSS ENCOUNTERS LOADED'); 
+ 
+/* =========================================
+   ECLIPSE 0.30 — FUTURISTIC GRAPHICS
+   ========================================= */
+
+let visualLayer30 = null;
+
+const visualColors30 = {
+  frontier: 0x27dfff,
+  ashen: 0xff743b,
+  frost: 0x75dfff,
+  verdant: 0x55ffad
+};
+
+// Futuristic environment structures.
+function buildVisualLayer30(regionId) {
+  if (!scene) return;
+
+  if (visualLayer30) {
+    scene.remove(visualLayer30);
+    visualLayer30.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else {
+          obj.material.dispose();
+        }
+      }
+    });
+  }
+
+  visualLayer30 = new THREE.Group();
+
+  const color = visualColors30[regionId] || visualColors30.frontier;
+
+  const metal = new THREE.MeshStandardMaterial({
+    color: 0x172c3b,
+    metalness: 0.85,
+    roughness: 0.28,
+    emissive: 0x071c2c,
+    emissiveIntensity: 0.8
+  });
+
+  const glow = new THREE.MeshStandardMaterial({
+    color: color,
+    emissive: color,
+    emissiveIntensity: 2.2,
+    metalness: 0.3,
+    roughness: 0.2
+  });
+
+  const rings = [];
+
+  const locations = [
+    [30, -20], [-30, -20],
+    [30, 20], [-30, 20],
+    [0, -38], [0, 38]
+  ];
+
+  for (const [x, z] of locations) {
+    const tower = new THREE.Group();
+
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.1, 1.5, 0.7, 8),
+      metal
+    );
+    base.position.y = 0.35;
+    tower.add(base);
+
+    const column = new THREE.Mesh(
+      new THREE.BoxGeometry(0.65, 4.5, 0.65),
+      metal
+    );
+    column.position.y = 2.7;
+    tower.add(column);
+
+    const energyStrip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 3.7, 0.75),
+      glow
+    );
+    energyStrip.position.set(0, 2.7, -0.36);
+    tower.add(energyStrip);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.35, 0.075, 8, 32),
+      glow
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 5.2;
+    tower.add(ring);
+    rings.push(ring);
+
+    const orb = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.48, 1),
+      glow
+    );
+    orb.position.y = 5.8;
+    tower.add(orb);
+
+    const groundRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.8, 0.055, 6, 32),
+      glow
+    );
+    groundRing.rotation.x = Math.PI / 2;
+    groundRing.position.y = 0.08;
+    tower.add(groundRing);
+    rings.push(groundRing);
+
+    tower.position.set(x, 0, z);
+    visualLayer30.add(tower);
+  }
+
+  // Floating atmospheric energy particles.
+  const positions = [];
+
+  for (let i = 0; i < 180; i++) {
+    positions.push(
+      (Math.random() - 0.5) * 100,
+      0.5 + Math.random() * 9,
+      (Math.random() - 0.5) * 100
+    );
+  }
+
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+
+  const particles = new THREE.Points(
+    particleGeometry,
+    new THREE.PointsMaterial({
+      color: color,
+      size: 0.19,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+
+  visualLayer30.add(particles);
+  visualLayer30.userData.rings = rings;
+  visualLayer30.userData.particles = particles;
+
+  scene.add(visualLayer30);
+}
+
+// Enhance lighting without expensive post-processing.
+const originalMakeWorld30 = makeWorld;
+
+makeWorld = function() {
+  originalMakeWorld30();
+
+  renderer.toneMappingExposure = 1.28;
+
+  const blueLight = new THREE.DirectionalLight(
+    0x59cfff,
+    0.65
+  );
+  blueLight.position.set(20, 30, -25);
+  scene.add(blueLight);
+
+  const ambientLight = new THREE.PointLight(
+    0x168dca,
+    24,
+    65
+  );
+  ambientLight.position.set(0, 9, 0);
+  scene.add(ambientLight);
+};
+
+// Futuristic explorer armor details.
+const originalCreatePlayer30 = createPlayer;
+
+createPlayer = function() {
+  originalCreatePlayer30();
+
+  const armorGlow = new THREE.MeshStandardMaterial({
+    color: 0x27dfff,
+    emissive: 0x087fae,
+    emissiveIntensity: 2,
+    metalness: 0.65,
+    roughness: 0.25
+  });
+
+  const darkArmor = new THREE.MeshStandardMaterial({
+    color: 0x24394b,
+    metalness: 0.9,
+    roughness: 0.25
+  });
+
+  // Chest energy plate.
+  makeMesh(
+    new THREE.BoxGeometry(0.48, 0.42, 0.09),
+    darkArmor, 0, 1.48, -0.25, player
+  );
+
+  makeMesh(
+    new THREE.BoxGeometry(0.29, 0.055, 0.035),
+    armorGlow, 0, 1.52, -0.31, player
+  );
+
+  // Shoulder armor.
+  for (const side of [-1, 1]) {
+    const shoulder = makeMesh(
+      new THREE.OctahedronGeometry(0.34, 1),
+      darkArmor,
+      side * 0.52, 1.62, 0,
+      player
+    );
+
+    shoulder.scale.set(1.25, 0.75, 1);
+
+    makeMesh(
+      new THREE.BoxGeometry(0.1, 0.3, 0.08),
+      armorGlow,
+      side * 0.53, 1.63, -0.22,
+      player
+    );
+  }
+
+  // Backpack energy core.
+  makeMesh(
+    new THREE.BoxGeometry(0.38, 0.55, 0.22),
+    darkArmor, 0, 1.45, 0.34, player
+  );
+
+  makeMesh(
+    new THREE.BoxGeometry(0.23, 0.35, 0.05),
+    armorGlow, 0, 1.47, 0.46, player
+  );
+};
+
+// Refresh the futuristic environment after region travel.
+const originalTravelToRegion30 = travelToRegion08;
+
+travelToRegion08 = function(regionId, silent = false) {
+  originalTravelToRegion30(regionId, silent);
+
+  if (currentRegion08 === regionId && scene) {
+    buildVisualLayer30(regionId);
+  }
+};
+
+// Animate energy structures and particles.
+const originalUpdateHUD30 = updateHUD;
+
+updateHUD = function() {
+  originalUpdateHUD30();
+
+  if (!visualLayer30) return;
+
+  for (const ring of visualLayer30.userData.rings || []) {
+    ring.rotation.z += 0.006;
+  }
+
+  const particles = visualLayer30.userData.particles;
+
+  if (particles) {
+    particles.rotation.y += 0.00035;
+  }
+};
+
+console.log('ECLIPSE 0.30 — FUTURISTIC GRAPHICS LOADED');
+
 window.startGame = startGame;
 window.__eclipseReady = true;
 </script>
