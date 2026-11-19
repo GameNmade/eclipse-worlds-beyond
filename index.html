@@ -6877,6 +6877,20 @@ document.title = 'ECLIPSE — Worlds Beyond 0.26';
 
 console.log('ECLIPSE 0.26 — CHARACTER PROGRESSION LOADED');
 
+// ECLIPSE 0.26 — TITLE SCREEN HUD FIX
+const titleHudFix26 = document.createElement('style');
+
+titleHudFix26.textContent = `
+  body:has(#titleScreen:not([style*="display: none"]))
+  #bottomStatus11 {
+    display:none !important;
+  }
+`;
+
+document.head.appendChild(titleHudFix26);
+
+console.log('ECLIPSE 0.26 — TITLE SCREEN HUD FIX LOADED');
+
 </script>
 </body>
 </html>
