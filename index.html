@@ -8632,6 +8632,77 @@ updateHUD = function() {
 console.log('ECLIPSE 0.31 — WORLD ATMOSPHERE & EFFECTS LOADED');
 
 */
+// ==========================================
+// ECLIPSE 0.32 — CINEMATIC COMBAT EFFECTS
+// ==========================================
+const cinematicEffects32 = [];
+function spawnCinematic32(x, y, z, color, power = 1) {
+  if (!scene) return;
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.07, 6, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+  const sparks = [];
+  for (let i = 0; i < 8; i++) {
+    const a = Math.PI * 2 * i / 8;
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.08 * power, 6, 6), new THREE.MeshBasicMaterial({ color, transparent: true }));
+    group.add(spark);
+    sparks.push({ mesh: spark, velocity: new THREE.Vector3(Math.cos(a) * 3, 1.5, Math.sin(a) * 3) });
+  }
+  scene.add(group);
+  cinematicEffects32.push({ group, ring, sparks, life: 0.55, max: 0.55 });
+}
+const updateEffectsBase32 = updateEffects;
+updateEffects = function(dt) {
+  updateEffectsBase32(dt);
+  for (const fx of [...cinematicEffects32]) {
+    fx.life -= dt;
+    const t = 1 - Math.max(0, fx.life / fx.max);
+    fx.ring.scale.setScalar(1 + t * 5);
+    fx.ring.material.opacity = 1 - t;
+    for (const spark of fx.sparks) {
+      spark.mesh.position.addScaledVector(spark.velocity, dt);
+      spark.mesh.material.opacity = 1 - t;
+    }
+    if (fx.life <= 0) {
+      scene.remove(fx.group);
+      fx.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+      cinematicEffects32.splice(cinematicEffects32.indexOf(fx), 1);
+    }
+  }
+};
+const damageEnemyBase32 = damageEnemy;
+damageEnemy = function(target, amount) {
+  if (!target || !target.position) return damageEnemyBase32(target, amount);
+  const x = target.position.x, z = target.position.z, isBoss = target === boss;
+  damageEnemyBase32(target, amount);
+  const defeated = isBoss ? boss === null : !enemies.includes(target);
+  spawnCinematic32(x, isBoss ? 2.2 : 1.1, z, defeated ? 0xffb34d : 0x36eaff, defeated ? 1.8 : 0.8);
+};
+const shootBase32 = shootBase;
+shootBase = function() {
+  const count = projectiles.length;
+  shootBase32();
+  if (projectiles.length > count) {
+    const orb = projectiles[projectiles.length - 1];
+    const trail = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 5, 16), new THREE.MeshBasicMaterial({ color: 0x55eaff, transparent: true, opacity: 0.8 }));
+    trail.rotation.x = Math.PI / 2;
+    orb.add(trail);
+  }
+};
+const novaBase32 = novaBase;
+novaBase = function() {
+  const ready = novaCooldown <= 0;
+  novaBase32();
+  if (ready && novaCooldown > 0) spawnCinematic32(player.position.x, 0.25, player.position.z, 0x42eaff, 2.4);
+};
+const createBossBase32 = createBoss;
+createBoss = function() {
+  createBossBase32();
+  if (boss) spawnCinematic32(boss.position.x, 2, boss.position.z, 0xff315e, 2.5);
+};
+console.log('ECLIPSE 0.32 — CINEMATIC COMBAT EFFECTS LOADED');
 // ECLIPSE PATCH RUNNER VALIDATION — no gameplay changes.
 window.startGame = startGame;
 window.__eclipseReady = true;
