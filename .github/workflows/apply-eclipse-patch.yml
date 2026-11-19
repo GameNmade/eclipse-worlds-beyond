@@ -1,1 +1,83 @@
 
+name: ECLIPSE Patch Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      patch:
+        description: "Unified code patch for index.html"
+        required: false
+        type: string
+      commit_message:
+        description: "Description of this update"
+        required: true
+        default: "Update ECLIPSE"
+        type: string
+      dry_run:
+        description: "Test without committing"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eclipse-main-patch
+  cancel-in-progress: false
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out ECLIPSE
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Validate and apply patch
+        env:
+          PATCH_CONTENT: ${{ inputs.patch }}
+          COMMIT_MESSAGE: ${{ inputs.commit_message }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$PATCH_CONTENT" ]; then
+            echo "Workflow connection test successful."
+            echo "No patch supplied; nothing changed."
+            exit 0
+          fi
+
+          if [ "${#PATCH_CONTENT}" -gt 60000 ]; then
+            echo "Patch is too large."
+            exit 1
+          fi
+
+          printf '%s' "$PATCH_CONTENT" > "$RUNNER_TEMP/eclipse.patch"
+
+          git apply --check "$RUNNER_TEMP/eclipse.patch"
+          git apply "$RUNNER_TEMP/eclipse.patch"
+
+          CHANGED="$(git diff --name-only)"
+
+          if [ "$CHANGED" != "index.html" ]; then
+            echo "Rejected: only index.html may be changed."
+            exit 1
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Patch validated successfully."
+            echo "Dry run: no commit was created."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- index.html
+          git commit -m "$COMMIT_MESSAGE"
+          git push origin HEAD:main
+
