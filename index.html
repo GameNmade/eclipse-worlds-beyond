@@ -7248,8 +7248,7 @@ console.log('ECLIPSE 0.27 — COMBAT SPECIALIZATIONS LOADED');
 /* =========================================
    ECLIPSE 0.28 — ADVANCED ENEMY AI
    ========================================= */
-window.startGame = startGame;
-window.__eclipseReady = true;
+ 
 // Visual warning rings for special attacks.
 function createAIWarning28(enemy, color, size) {
   if (enemy.userData.aiRing28) {
@@ -7492,7 +7491,8 @@ updateEnemies = function(dt) {
 document.title = 'ECLIPSE — Worlds Beyond 0.28';
 
 console.log('ECLIPSE 0.28 — ADVANCED ENEMY AI LOADED');
-
+window.startGame = startGame;
+window.__eclipseReady = true;
 </script>
 <script>
 (function () {
@@ -7523,7 +7523,7 @@ console.log('ECLIPSE 0.28 — ADVANCED ENEMY AI LOADED');
     'pointerdown',
     function (event) {
       event.preventDefault();
-      launch(true);
+      launch(true)
     }
   );
 })();
