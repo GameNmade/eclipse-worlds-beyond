@@ -4550,3 +4550,615 @@ console.log('ECLIPSE 0.21 — EQUIPMENT FORGE LOADED');
 </script>
 </body>
 </html>
+
+/* =========================================
+   ECLIPSE 0.22 — RESOURCE GATHERING & CRAFTING
+   ========================================= */
+
+let resources22 = {
+  alloy: 0,
+  xenocrystal: 0,
+  voidEssence: 0
+};
+
+let minedDeposits22 = [];
+let depositObjects22 = [];
+let nearbyDeposit22 = null;
+
+const depositLocations22 = {
+  frontier: [
+    {x:-19,z:-15,type:'alloy'},
+    {x:20,z:17,type:'xenocrystal'},
+    {x:-24,z:22,type:'voidEssence'}
+  ],
+  ashen: [
+    {x:-20,z:16,type:'alloy'},
+    {x:22,z:-18,type:'voidEssence'},
+    {x:-25,z:-22,type:'xenocrystal'}
+  ],
+  frost: [
+    {x:-21,z:-18,type:'xenocrystal'},
+    {x:23,z:20,type:'alloy'},
+    {x:-25,z:22,type:'voidEssence'}
+  ],
+  verdant: [
+    {x:-20,z:19,type:'voidEssence'},
+    {x:23,z:-20,type:'xenocrystal'},
+    {x:-25,z:22,type:'alloy'}
+  ]
+};
+
+const resourceInfo22 = {
+  alloy: {
+    name:'ALIEN ALLOY',
+    color:0xe0a34d,
+    amount:2
+  },
+  xenocrystal: {
+    name:'XENOCRYSTAL',
+    color:0x45e8ed,
+    amount:2
+  },
+  voidEssence: {
+    name:'VOID ESSENCE',
+    color:0xb36aff,
+    amount:1
+  }
+};
+
+const resourceStyle22 = document.createElement('style');
+
+resourceStyle22.textContent = `
+#resourceDisplay22 {
+  position:fixed;
+  top:12px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:25;
+  display:none;
+  padding:8px 11px;
+  border:1px solid #648b9b;
+  border-radius:8px;
+  background:rgba(5,12,20,.92);
+  color:#e5f5fa;
+  font:900 9px Arial;
+  letter-spacing:1px;
+  white-space:nowrap;
+  box-shadow:0 3px 14px #0009;
+}
+
+#mineButton22 {
+  position:fixed;
+  left:50%;
+  bottom:155px;
+  transform:translateX(-50%);
+  z-index:35;
+  display:none;
+  padding:13px 19px;
+  border:1px solid #64e7e9;
+  border-radius:8px;
+  background:linear-gradient(135deg,#17434b,#10232d);
+  color:#b7ffff;
+  font-weight:900;
+  letter-spacing:2px;
+  box-shadow:0 0 18px #35dce955;
+}
+
+#craftButton22 {
+  display:block;
+  width:100%;
+  margin:12px 0;
+  padding:13px;
+  border:1px solid #65c9d9;
+  border-radius:8px;
+  background:linear-gradient(120deg,#183e4c,#10232d);
+  color:#a8f4ff;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+#craftPanel22 {
+  position:fixed;
+  inset:0;
+  z-index:140;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:15px;
+  background:rgba(0,0,0,.9);
+  font-family:Arial,sans-serif;
+}
+
+#craftWindow22 {
+  width:100%;
+  max-width:430px;
+  max-height:85%;
+  overflow-y:auto;
+  padding:18px;
+  border:1px solid #58cbd5;
+  border-radius:12px;
+  background:linear-gradient(145deg,#172a35,#070d15);
+  color:#e8f5f8;
+  box-shadow:0 0 30px #35cbd333;
+}
+
+#craftWindow22 h2 {
+  color:#8debf1;
+  letter-spacing:3px;
+  font-size:19px;
+}
+
+.resourceRow22 {
+  display:flex;
+  justify-content:space-between;
+  padding:9px;
+  margin:6px 0;
+  border:1px solid #344c59;
+  border-radius:6px;
+  background:#0b1720;
+  font-size:12px;
+}
+
+.recipe22 {
+  padding:12px;
+  margin:10px 0;
+  border:1px solid #526d7b;
+  border-radius:8px;
+  background:#101e29;
+}
+
+.recipe22 strong {
+  display:block;
+  color:#e9c77f;
+  margin-bottom:6px;
+  letter-spacing:1px;
+}
+
+.recipe22 small {
+  display:block;
+  color:#a9c1ca;
+  line-height:1.6;
+  margin-bottom:9px;
+}
+
+.recipe22 button {
+  width:100%;
+  padding:11px;
+  border:1px solid #63cbd4;
+  border-radius:6px;
+  background:#173d49;
+  color:#d4fbff;
+  font-weight:900;
+}
+
+.recipe22 button:disabled {
+  opacity:.4;
+}
+
+#craftClose22 {
+  width:100%;
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #657d89;
+  border-radius:7px;
+  background:#25343d;
+  color:white;
+  font-weight:900;
+}
+
+@media(max-width:420px) {
+  #resourceDisplay22 {
+    top:45px;
+    font-size:8px;
+  }
+
+  #mineButton22 {
+    bottom:145px;
+  }
+}
+`;
+
+document.head.appendChild(resourceStyle22);
+
+// Resource display.
+const resourceDisplay22 = document.createElement('div');
+resourceDisplay22.id = 'resourceDisplay22';
+document.body.appendChild(resourceDisplay22);
+
+// Mining button.
+const mineButton22 = document.createElement('button');
+mineButton22.id = 'mineButton22';
+mineButton22.textContent = 'MINE RESOURCE';
+document.body.appendChild(mineButton22);
+
+// Crafting station.
+const craftPanel22 = document.createElement('div');
+craftPanel22.id = 'craftPanel22';
+
+craftPanel22.innerHTML = `
+  <div id="craftWindow22">
+    <h2>FIELD CRAFTING STATION</h2>
+    <p style="color:#a9c1ca;font-size:11px">
+      Convert gathered materials into useful supplies.
+    </p>
+
+    <div id="craftResources22"></div>
+
+    <div id="craftRecipes22"></div>
+
+    <button id="craftClose22">CLOSE STATION</button>
+  </div>
+`;
+
+document.body.appendChild(craftPanel22);
+
+function updateResources22() {
+  resourceDisplay22.innerHTML =
+    'ALLOY: '+resources22.alloy+
+    ' &nbsp; | &nbsp; XENO: '+resources22.xenocrystal+
+    ' &nbsp; | &nbsp; VOID: '+resources22.voidEssence;
+}
+
+function clearDeposits22() {
+  for (const deposit of depositObjects22) {
+    scene.remove(deposit.group);
+  }
+
+  depositObjects22.length = 0;
+  nearbyDeposit22 = null;
+  mineButton22.style.display = 'none';
+}
+
+function buildDeposits22(region) {
+  if (!scene) return;
+
+  clearDeposits22();
+
+  const locations = depositLocations22[region] || [];
+
+  locations.forEach((location,index) => {
+    const id = region+'_'+index;
+
+    if (minedDeposits22.includes(id)) return;
+
+    const info = resourceInfo22[location.type];
+    const group = new THREE.Group();
+
+    group.position.set(location.x,0,location.z);
+
+    const baseMaterial = new THREE.MeshStandardMaterial({
+      color:0x283541,
+      metalness:.65,
+      roughness:.4
+    });
+
+    const crystalMaterial = new THREE.MeshStandardMaterial({
+      color:info.color,
+      emissive:info.color,
+      emissiveIntensity:1.5,
+      metalness:.35,
+      roughness:.2
+    });
+
+    const ringMaterial = new THREE.MeshBasicMaterial({
+      color:info.color,
+      transparent:true,
+      opacity:.7
+    });
+
+    makeMesh(
+      new THREE.DodecahedronGeometry(1.15,0),
+      baseMaterial,
+      0,.65,0,group
+    );
+
+    const crystal = makeMesh(
+      new THREE.OctahedronGeometry(.8),
+      crystalMaterial,
+      0,1.65,0,group
+    );
+
+    crystal.rotation.x=.3;
+
+    const ring = makeMesh(
+      new THREE.TorusGeometry(1.35,.055,8,32),
+      ringMaterial,
+      0,.12,0,group
+    );
+
+    ring.rotation.x=Math.PI/2;
+
+    scene.add(group);
+
+    depositObjects22.push({
+      id,
+      type:location.type,
+      group,
+      crystal,
+      ring
+    });
+  });
+}
+
+function updateDeposits22(dt) {
+  if (!started || !player || !scene || dungeon || inventoryOpen) {
+    mineButton22.style.display='none';
+    nearbyDeposit22=null;
+    return;
+  }
+
+  let nearest=null;
+  let nearestDistance=3.8;
+
+  for (const deposit of depositObjects22) {
+    deposit.crystal.rotation.y += dt*.8;
+    deposit.crystal.position.y =
+      1.65+Math.sin(clock.elapsedTime*2)*.2;
+
+    deposit.ring.rotation.z += dt*.35;
+
+    const distance=Math.hypot(
+      player.position.x-deposit.group.position.x,
+      player.position.z-deposit.group.position.z
+    );
+
+    if (distance<nearestDistance) {
+      nearest=deposit;
+      nearestDistance=distance;
+    }
+  }
+
+  nearbyDeposit22=nearest;
+
+  mineButton22.style.display=nearest?'block':'none';
+
+  if (nearest) {
+    mineButton22.textContent=
+      'MINE '+resourceInfo22[nearest.type].name;
+  }
+}
+
+function mineDeposit22() {
+  if (!nearbyDeposit22) return;
+
+  const deposit=nearbyDeposit22;
+  const info=resourceInfo22[deposit.type];
+
+  resources22[deposit.type]+=info.amount;
+  minedDeposits22.push(deposit.id);
+
+  scene.remove(deposit.group);
+
+  depositObjects22=depositObjects22.filter(
+    item=>item!==deposit
+  );
+
+  nearbyDeposit22=null;
+  mineButton22.style.display='none';
+
+  updateResources22();
+  saveGame();
+
+  showMessage(
+    '+'+info.amount+' '+info.name+' COLLECTED',
+    2.5
+  );
+}
+
+mineButton22.addEventListener('click',mineDeposit22);
+
+// Crafting recipes.
+const recipes22 = [
+  {
+    id:'medkit',
+    name:'FIELD MEDKIT',
+    description:'Restore 45 health immediately.',
+    cost:{alloy:2,xenocrystal:1,voidEssence:0}
+  },
+  {
+    id:'xp',
+    name:'EXPERIENCE MODULE',
+    description:'Gain 120 experience points.',
+    cost:{alloy:2,xenocrystal:2,voidEssence:0}
+  },
+  {
+    id:'shards',
+    name:'ENERGY SHARD CACHE',
+    description:'Recover 20 Energy Shards.',
+    cost:{alloy:2,xenocrystal:0,voidEssence:1}
+  }
+];
+
+function canCraft22(recipe) {
+  return Object.keys(recipe.cost).every(
+    key=>resources22[key]>=recipe.cost[key]
+  );
+}
+
+function craftItem22(recipe) {
+  if (!canCraft22(recipe)) {
+    showMessage('NOT ENOUGH MATERIALS',2);
+    return;
+  }
+
+  for (const key of Object.keys(recipe.cost)) {
+    resources22[key]-=recipe.cost[key];
+  }
+
+  if (recipe.id==='medkit') {
+    const healed=Math.min(45,maxHealth-health);
+    health=Math.min(maxHealth,health+45);
+
+    showMessage(
+      healed>0?'FIELD MEDKIT USED — +'+healed+' HEALTH':'HEALTH ALREADY FULL',
+      2.5
+    );
+  }
+
+  if (recipe.id==='xp') {
+    xp+=120;
+    checkLevel();
+    showMessage('EXPERIENCE MODULE CRAFTED — +120 XP',2.5);
+  }
+
+  if (recipe.id==='shards') {
+    shards+=20;
+    showMessage('ENERGY CACHE CRAFTED — +20 SHARDS',2.5);
+  }
+
+  updateResources22();
+  refreshCrafting22();
+  updateHUD();
+  saveGame();
+}
+
+function refreshCrafting22() {
+  const resourceArea=document.getElementById('craftResources22');
+  const recipeArea=document.getElementById('craftRecipes22');
+
+  resourceArea.innerHTML=`
+    <div class="resourceRow22">
+      <span>ALIEN ALLOY</span><strong>${resources22.alloy}</strong>
+    </div>
+    <div class="resourceRow22">
+      <span>XENOCRYSTAL</span><strong>${resources22.xenocrystal}</strong>
+    </div>
+    <div class="resourceRow22">
+      <span>VOID ESSENCE</span><strong>${resources22.voidEssence}</strong>
+    </div>
+  `;
+
+  recipeArea.innerHTML='';
+
+  for (const recipe of recipes22) {
+    const card=document.createElement('div');
+    card.className='recipe22';
+
+    const title=document.createElement('strong');
+    title.textContent=recipe.name;
+
+    const description=document.createElement('small');
+    description.textContent=
+      recipe.description+
+      ' Materials: '+
+      Object.keys(recipe.cost)
+        .filter(key=>recipe.cost[key]>0)
+        .map(key=>recipe.cost[key]+' '+key)
+        .join(', ');
+
+    const button=document.createElement('button');
+    button.textContent='CRAFT';
+    button.disabled=!canCraft22(recipe);
+    button.addEventListener('click',()=>craftItem22(recipe));
+
+    card.append(title,description,button);
+    recipeArea.appendChild(card);
+  }
+}
+
+function openCrafting22() {
+  refreshCrafting22();
+  craftPanel22.style.display='flex';
+}
+
+document.getElementById('craftClose22')
+  .addEventListener('click',()=>{
+    craftPanel22.style.display='none';
+  });
+
+// Add crafting station to the existing inventory.
+const craftButton22=document.createElement('button');
+craftButton22.id='craftButton22';
+craftButton22.textContent='OPEN CRAFTING STATION';
+craftButton22.addEventListener('click',openCrafting22);
+
+document.getElementById('inventory').appendChild(craftButton22);
+
+// Persist gathered resources and mined locations.
+const originalSaveGame22=saveGame;
+
+saveGame=function() {
+  originalSaveGame22();
+
+  try {
+    const raw=localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data=JSON.parse(raw);
+    data.resources22={...resources22};
+    data.minedDeposits22=[...minedDeposits22];
+
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  } catch(err) {}
+};
+
+const originalLoadGame22=loadGame;
+
+loadGame=function() {
+  const result=originalLoadGame22();
+
+  try {
+    const raw=localStorage.getItem(SAVE_KEY);
+
+    if (raw) {
+      const data=JSON.parse(raw);
+
+      resources22={
+        alloy:Math.max(0,Number(data.resources22?.alloy)||0),
+        xenocrystal:Math.max(0,Number(data.resources22?.xenocrystal)||0),
+        voidEssence:Math.max(0,Number(data.resources22?.voidEssence)||0)
+      };
+
+      minedDeposits22=Array.isArray(data.minedDeposits22)
+        ?data.minedDeposits22:[];
+    }
+  } catch(err) {}
+
+  updateResources22();
+  return result;
+};
+
+// Start with a fresh resource inventory on New Game.
+const originalStartGame22=startGame;
+
+startGame=function(newGame=false) {
+  if (newGame) {
+    resources22={alloy:0,xenocrystal:0,voidEssence:0};
+    minedDeposits22=[];
+  }
+
+  originalStartGame22(newGame);
+
+  if (started && scene) {
+    buildDeposits22(currentRegion08);
+    resourceDisplay22.style.display='block';
+    updateResources22();
+  }
+};
+
+// Rebuild resource deposits when traveling between worlds.
+const originalTravelRegion22=travelToRegion08;
+
+travelToRegion08=function(regionId,silent=false) {
+  originalTravelRegion22(regionId,silent);
+
+  if (started && scene && !dungeon) {
+    buildDeposits22(regionId);
+  }
+};
+
+// Keep the resource display and nearby mining prompt updated.
+const originalUpdateHUD22=updateHUD;
+
+updateHUD=function() {
+  originalUpdateHUD22();
+
+  if (started) {
+    resourceDisplay22.style.display='block';
+    updateDeposits22(clock.getDelta());
+  }
+};
+
+document.title='ECLIPSE — Worlds Beyond 0.22';
+
+console.log('ECLIPSE 0.22 — RESOURCE GATHERING & CRAFTING LOADED');
