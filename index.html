@@ -6891,6 +6891,360 @@ document.head.appendChild(titleHudFix26);
 
 console.log('ECLIPSE 0.26 — TITLE SCREEN HUD FIX LOADED');
 
+/* =========================================
+   ECLIPSE 0.27 — COMBAT SPECIALIZATIONS
+   ========================================= */
+
+let masteryRanks27 = {
+  warlord: 0,
+  arcanist: 0,
+  sentinel: 0
+};
+
+let novaMasteryActive27 = false;
+
+const masteryDefs27 = {
+  warlord: {
+    name: 'WARLORD',
+    description: '+4% weapon damage per rank.',
+    color: '#ff9870'
+  },
+  arcanist: {
+    name: 'ARCANIST',
+    description: '+7% Nova Blast damage per rank.',
+    color: '#bd9aff'
+  },
+  sentinel: {
+    name: 'SENTINEL',
+    description: '+3% incoming damage reduction per rank.',
+    color: '#80d9e8'
+  }
+};
+
+function masterySpent27() {
+  return Object.values(masteryRanks27)
+    .reduce((sum, rank) => sum + rank, 0);
+}
+
+function masteryEarned27() {
+  return Math.floor(Math.max(0, level - 1) / 3);
+}
+
+function masteryAvailable27() {
+  return Math.max(0, masteryEarned27() - masterySpent27());
+}
+
+function upgradeMastery27(key) {
+  if (!masteryDefs27[key]) return;
+
+  if (masteryAvailable27() <= 0) {
+    showMessage('NO SPECIALIZATION POINTS AVAILABLE', 1.5);
+    return;
+  }
+
+  if (masteryRanks27[key] >= 5) {
+    showMessage('SPECIALIZATION MAXIMUM REACHED', 1.5);
+    return;
+  }
+
+  masteryRanks27[key]++;
+
+  recalculateStats();
+  renderMasteries27();
+  renderProfile26();
+  saveGame();
+
+  showMessage(
+    masteryDefs27[key].name + ' SPECIALIZATION UPGRADED',
+    2
+  );
+}
+
+// SPECIALIZATION PANEL
+document.querySelector('#inventory .invPanel')
+  .insertAdjacentHTML('beforeend', `
+    <div style="margin-top:12px">
+      <button id="masteryButton27"
+        style="width:100%;padding:12px;
+        background:#20243b;border:1px solid #9879c9;
+        color:#d9c4ff;font-weight:bold;border-radius:7px">
+        COMBAT SPECIALIZATIONS
+      </button>
+    </div>
+  `);
+
+document.body.insertAdjacentHTML('beforeend', `
+  <div id="masteryPanel27" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:1200;
+    background:rgba(3,6,14,.97);
+    color:#edf5ff;
+    overflow-y:auto;
+    padding:18px 12px;
+    box-sizing:border-box">
+
+    <div style="
+      max-width:440px;
+      margin:15px auto;
+      padding:16px;
+      background:#111b2b;
+      border:1px solid #78639d;
+      border-radius:12px">
+
+      <div style="display:flex;
+        justify-content:space-between;
+        align-items:center">
+        <h2 style="color:#d7bdff;font-size:18px">
+          COMBAT SPECIALIZATIONS
+        </h2>
+        <button id="closeMastery27">CLOSE ✕</button>
+      </div>
+
+      <div id="masteryPoints27" style="
+        padding:12px;
+        margin:12px 0;
+        background:#20283b;
+        border-radius:7px;
+        color:#f5d58e;
+        text-align:center;
+        font-size:13px">
+      </div>
+
+      <div id="masteryCards27"></div>
+
+      <p style="font-size:10px;color:#8294a8;
+        line-height:1.6;margin-top:14px">
+        Earn one specialization point every three character levels.
+        Each specialization can reach rank five.
+      </p>
+    </div>
+  </div>
+`);
+
+const masteryStyle27 = document.createElement('style');
+
+masteryStyle27.textContent = `
+  #masteryPanel27 button {
+    background:#26334b;
+    border:1px solid #7186a9;
+    color:#edf5ff;
+    padding:10px;
+    border-radius:6px;
+    font-weight:bold;
+  }
+
+  #masteryPanel27 button:disabled {
+    opacity:.35;
+  }
+
+  .masteryCard27 {
+    background:#172437;
+    border:1px solid #435774;
+    border-radius:8px;
+    padding:13px;
+    margin:10px 0;
+  }
+
+  .masteryCard27 p {
+    color:#aebfd2;
+    font-size:12px;
+    line-height:1.5;
+  }
+
+  .masteryRank27 {
+    color:#f5d58e;
+    font-size:12px;
+    margin:10px 0;
+  }
+
+  .masteryCard27 button {
+    width:100%;
+  }
+`;
+
+document.head.appendChild(masteryStyle27);
+
+function renderMasteries27() {
+  const available = masteryAvailable27();
+
+  document.getElementById('masteryPoints27').textContent =
+    'AVAILABLE POINTS: ' + available +
+    '  |  CHARACTER LEVEL: ' + level;
+
+  const root = document.getElementById('masteryCards27');
+  root.innerHTML = '';
+
+  for (const [key, def] of Object.entries(masteryDefs27)) {
+    const rank = masteryRanks27[key];
+
+    const card = document.createElement('div');
+    card.className = 'masteryCard27';
+
+    const title = document.createElement('strong');
+    title.textContent = def.name;
+    title.style.color = def.color;
+
+    const description = document.createElement('p');
+    description.textContent = def.description;
+
+    const rankText = document.createElement('div');
+    rankText.className = 'masteryRank27';
+    rankText.textContent = 'RANK ' + rank + ' / 5';
+
+    const button = document.createElement('button');
+    button.textContent =
+      rank >= 5 ? 'MAXIMUM RANK' : 'UPGRADE SPECIALIZATION';
+
+    button.disabled = available <= 0 || rank >= 5;
+
+    button.onclick = () => upgradeMastery27(key);
+
+    card.append(title, description, rankText, button);
+    root.appendChild(card);
+  }
+}
+
+document.getElementById('masteryButton27')
+  .addEventListener('click', () => {
+    renderMasteries27();
+    document.getElementById('masteryPanel27').style.display = 'block';
+  });
+
+document.getElementById('closeMastery27')
+  .addEventListener('click', () => {
+    document.getElementById('masteryPanel27').style.display = 'none';
+  });
+
+// WARLORD: WEAPON DAMAGE BONUS
+const originalRecalculateStats27 = recalculateStats;
+
+recalculateStats = function() {
+  originalRecalculateStats27();
+
+  equipmentStats.damage *=
+    1 + masteryRanks27.warlord * 0.04;
+};
+
+// ARCANIST: NOVA DAMAGE BONUS
+const originalNova27 = nova;
+
+nova = function() {
+  novaMasteryActive27 = true;
+
+  try {
+    originalNova27();
+  } finally {
+    novaMasteryActive27 = false;
+  }
+};
+
+const originalDamageEnemy27 = damageEnemy;
+
+damageEnemy = function(target, amount) {
+  let finalAmount = amount;
+
+  if (novaMasteryActive27) {
+    finalAmount *= 1 + masteryRanks27.arcanist * 0.07;
+  }
+
+  originalDamageEnemy27(target, finalAmount);
+};
+
+// SENTINEL: DAMAGE REDUCTION
+const originalUpdateEnemies27 = updateEnemies;
+
+updateEnemies = function(dt) {
+  const oldArmor = skills.armor;
+  skills.armor += masteryRanks27.sentinel * 0.375;
+
+  try {
+    originalUpdateEnemies27(dt);
+  } finally {
+    skills.armor = oldArmor;
+  }
+};
+
+const originalUpdateProjectiles27 = updateProjectiles;
+
+updateProjectiles = function(dt) {
+  const oldArmor = skills.armor;
+  skills.armor += masteryRanks27.sentinel * 0.375;
+
+  try {
+    originalUpdateProjectiles27(dt);
+  } finally {
+    skills.armor = oldArmor;
+  }
+};
+
+// SAVE SPECIALIZATION DATA
+const originalSaveGame27 = saveGame;
+
+saveGame = function() {
+  originalSaveGame27();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+    data.masteryRanks27 = {...masteryRanks27};
+
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (err) {}
+};
+
+// LOAD SPECIALIZATION DATA
+const originalLoadGame27 = loadGame;
+
+loadGame = function() {
+  const result = originalLoadGame27();
+
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+
+    if (raw) {
+      const data = JSON.parse(raw);
+
+      if (data.masteryRanks27) {
+        for (const key of Object.keys(masteryRanks27)) {
+          masteryRanks27[key] = Math.max(
+            0,
+            Math.min(5, Number(data.masteryRanks27[key]) || 0)
+          );
+        }
+      }
+    }
+  } catch (err) {}
+
+  recalculateStats();
+  return result;
+};
+
+// NEW GAME RESET
+const originalStartGame27 = startGame;
+
+startGame = function(newGame = false) {
+  if (newGame) {
+    masteryRanks27 = {
+      warlord: 0,
+      arcanist: 0,
+      sentinel: 0
+    };
+  }
+
+  originalStartGame27(newGame);
+  recalculateStats();
+  renderMasteries27();
+};
+
+// VERSION LABEL
+document.title = 'ECLIPSE — Worlds Beyond 0.27';
+
+console.log('ECLIPSE 0.27 — COMBAT SPECIALIZATIONS LOADED');
+
 </script>
 </body>
 </html>
