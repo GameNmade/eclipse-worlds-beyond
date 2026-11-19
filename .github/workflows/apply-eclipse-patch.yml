@@ -57,7 +57,7 @@ jobs:
           fi
 
           PATCH_CONTENT="${PATCH_CONTENT//__ECLIPSE_NL__/$'\n'}"
-printf '%s\n' "$PATCH_CONTENT" > "$RUNNER_TEMP/eclipse.patch"
+          printf '%s\n' "$PATCH_CONTENT" > "$RUNNER_TEMP/eclipse.patch"
 
           git apply --check "$RUNNER_TEMP/eclipse.patch"
           git apply "$RUNNER_TEMP/eclipse.patch"
