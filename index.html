@@ -8846,3 +8846,4 @@ window.addEventListener('unhandledrejection', function(event) {
 </script>
 </body>
 </html>
+(function(){const prior=createPlayer;createPlayer=function(){prior();const rig=player&&player.children.find(c=>c.userData&&c.userData.arms&&c.userData.legs);if(!rig)return;const arm=rig.userData.arms.find(a=>a.side===1);if(!arm)return;const gun=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x526b7b,metalness:.8,roughness:.25}),cyan=new THREE.MeshStandardMaterial({color:0x25eaff,emissive:0x079bbd,emissiveIntensity:2});function part(x,y,z,w,h,d,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;gun.add(o)}part(0,0,0,.24,.22,.72,metal);part(0,-.2,.14,.17,.34,.22,metal);part(0,.1,-.46,.15,.15,.46,metal);part(0,.14,-.17,.18,.05,.32,cyan);part(0,.02,-.73,.1,.1,.1,cyan);gun.scale.setScalar(1.35);gun.position.set(0,-.12,-.18);arm.lower.add(gun)};console.log('ECLIPSE RIGHT HAND WEAPON ATTACHED')})();
