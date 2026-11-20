@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050914">
+<title>STARWARD — Deep Space Exploration</title>
+<style>
+:root{color-scheme:dark;--cyan:#76eaff;--blue:#4b9fff;--panel:rgba(7,15,31,.82);--line:rgba(118,234,255,.24);--muted:#9aadc7}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030711;color:#eaf7ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}canvas{display:block;position:fixed;inset:0;z-index:0}
+#vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 35%,rgba(1,4,12,.48) 100%)}
+#topbar{position:fixed;z-index:4;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(180deg,rgba(2,7,17,.9),transparent)}
+.brand{font-size:13px;letter-spacing:.28em;font-weight:800;color:#dffaff}.brand span{color:var(--cyan)}.status{font-size:10px;letter-spacing:.16em;color:#8ee9ff;border:1px solid var(--line);padding:7px 10px;border-radius:20px;background:rgba(5,17,31,.65)}
+#leftPanel{position:fixed;z-index:3;left:18px;top:76px;width:220px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(14px);box-shadow:0 12px 40px #0006}
+.eyebrow{font-size:9px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase}.big{font-size:18px;font-weight:650;margin:6px 0 3px}.sub{font-size:11px;color:var(--muted);line-height:1.5}.statrow{display:flex;justify-content:space-between;margin-top:12px;font-size:10px;color:var(--muted)}.statrow b{color:#e7f8ff;font-weight:600}
+#rightPanel{position:fixed;z-index:3;right:18px;top:76px;width:210px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(14px)}
+.sectionTitle{font-size:9px;letter-spacing:.2em;color:var(--cyan);margin-bottom:9px}.objective{font-size:12px;line-height:1.5;color:#e1f3ff}.meter{height:3px;background:#203044;border-radius:5px;margin-top:9px;overflow:hidden}.meter i{display:block;width:38%;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+#bottom{position:fixed;z-index:3;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center}
+button{font:inherit;color:#dffaff;background:rgba(8,20,39,.82);border:1px solid var(--line);border-radius:8px;padding:10px 13px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(10px)}
+button:active{background:rgba(35,88,121,.8);transform:translateY(1px)}button.primary{border-color:rgba(118,234,255,.65);background:rgba(22,74,103,.75)}
+#crosshair{position:fixed;z-index:2;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%);opacity:.65;pointer-events:none}
+#crosshair:before,#crosshair:after{content:"";position:absolute;background:#9cefff}.crosshairH{position:absolute;left:0;top:9px;width:20px;height:1px;background:#9cefff}.crosshairV{position:absolute;left:9px;top:0;width:1px;height:20px;background:#9cefff}
+#toast{position:fixed;z-index:8;left:50%;top:22%;transform:translateX(-50%);padding:10px 16px;border:1px solid var(--line);background:rgba(4,16,30,.94);border-radius:8px;font-size:11px;letter-spacing:.08em;opacity:0;transition:opacity .25s;pointer-events:none}
+#mapOverlay{display:none;position:fixed;z-index:7;inset:6% 5%;border:1px solid var(--line);border-radius:16px;background:rgba(3,9,21,.96);backdrop-filter:blur(18px);padding:18px;box-shadow:0 25px 100px #000b}
+#mapOverlay.open{display:flex;flex-direction:column}.mapHead{display:flex;align-items:center;justify-content:space-between}.mapHead h2{font-size:14px;letter-spacing:.18em;font-weight:600}.mapHead p{font-size:10px;color:var(--muted)}#galaxy{width:100%;height:100%;min-height:180px;touch-action:pan-y}
+#mapHint{font-size:10px;color:var(--muted);padding-top:8px}
+#touchControls{display:none;position:fixed;z-index:5;bottom:76px;left:16px;right:16px;justify-content:space-between;align-items:end;pointer-events:none}
+#stick{width:116px;height:116px;border:1px solid rgba(118,234,255,.35);border-radius:50%;background:rgba(10,28,48,.28);position:relative;pointer-events:auto;touch-action:none}
+#nub{position:absolute;width:42px;height:42px;border-radius:50%;left:36px;top:36px;background:rgba(93,208,244,.42);border:1px solid #9cefff;box-shadow:0 0 20px #4bc8ff55}
+.touchButtons{display:flex;flex-direction:column;gap:8px;pointer-events:auto}.touchButtons button{width:72px;height:42px;padding:0;font-size:9px}
+#help{position:fixed;z-index:3;bottom:72px;left:50%;transform:translateX(-50%);font-size:9px;color:#8196b2;letter-spacing:.08em;white-space:nowrap}
+@media(max-width:700px){#topbar{padding:11px 13px}.brand{font-size:11px}#leftPanel{left:10px;top:58px;width:158px;padding:10px}#rightPanel{right:10px;top:58px;width:148px;padding:10px}.big{font-size:14px}.sub{font-size:10px}.statrow{font-size:9px;margin-top:8px}#bottom{bottom:10px;gap:5px}button{padding:9px 9px;font-size:9px}#help{display:none}#touchControls{display:flex}#mapOverlay{inset:3% 3%;padding:12px}}
+@media(max-height:620px) and (min-width:701px){#leftPanel,#rightPanel{top:58px}#bottom{bottom:8px}}
+</style>
+</head>
+<body>
+<div id="vignette"></div>
+<div id="topbar"><div class="brand">STAR<span>WARD</span> <span style="color:#7f91a9;font-weight:400">/ DEEP SPACE</span></div><div class="status" id="saveStatus">● LOCAL WORLD SAVED</div></div>
+<div id="leftPanel">
+ <div class="eyebrow">Current location</div><div class="big" id="systemName">Asterion Reach</div><div class="sub" id="systemClass">G-type star · Frontier system</div>
+ <div class="statrow"><span>Coordinates</span><b id="coords">014 : 082 : 031</b></div>
+ <div class="statrow"><span>Ship speed</span><b id="speed">0 km/s</b></div>
+ <div class="statrow"><span>Systems charted</span><b id="charted">1 / 2,400</b></div>
+</div>
+<div id="rightPanel">
+ <div class="sectionTitle">ACTIVE DIRECTIVE</div>
+ <div class="objective" id="directive">Survey the Asterion system. Approach a planet to begin a scan.</div>
+ <div class="meter"><i id="progress"></i></div>
+ <div class="statrow"><span>Exploration data</span><b id="data">120 units</b></div>
+ <div class="statrow"><span>Ship integrity</span><b>100%</b></div>
+</div>
+<div id="crosshair"><div class="crosshairH"></div><div class="crosshairV"></div></div>
+<div id="toast"></div>
+<div id="help">WASD / ARROWS TO FLY · SHIFT BOOST · M GALAXY MAP · E SCAN</div>
+<div id="bottom"><button id="scanBtn" class="primary">Scan area</button><button id="mapBtn">Galaxy map</button><button id="saveBtn">Save</button></div>
+<div id="touchControls"><div id="stick"><div id="nub"></div></div><div class="touchButtons"><button id="boostBtn">Boost</button><button id="scanTouch" class="primary">Scan</button></div></div>
+<div id="mapOverlay"><div class="mapHead"><div><h2>GALACTIC NAVIGATION</h2><p>2,400 catalogued star systems · Select a system to travel</p></div><button id="closeMap">Close ✕</button></div><canvas id="galaxy"></canvas><div id="mapHint">Tap a star to select it. Nearby systems are highlighted in cyan. Travel time is simulated.</div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const $=id=>document.getElementById(id);
+const SAVE_KEY='starward_universe_v1';
+const SYSTEM_COUNT=2400;
+let save={charted:[0],data:120,system:0,position:{x:0,y:0,z:34},discoveries:[],lastSaved:0};
+try{const old=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(old)save={...save,...old};}catch(e){}
+let activeSystem=save.system||0, speed=0, yaw=0, pitch=0, boost=false, scanPulse=0;
+const input={forward:0,side:0,vertical:0};
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x030711);scene.fog=new THREE.FogExp2(0x030711,0.00016);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,150000);
+camera.position.set(0,7,45);
+const renderer=new THREE.WebGLRenderer({antialias:innerWidth>700,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<700?1.35:1.8));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;document.body.appendChild(renderer.domElement);
+const clock=new THREE.Clock();
+const ambient=new THREE.HemisphereLight(0x9bbcff,0x101625,0.42);scene.add(ambient);
+const starLight=new THREE.PointLight(0xffd9a0,2200,5000,1.7);starLight.position.set(0,0,0);scene.add(starLight);
+const starCore=new THREE.Mesh(new THREE.SphereGeometry(3.4,32,24),new THREE.MeshBasicMaterial({color:0xffd49a}));scene.add(starCore);
+const corona=new THREE.Mesh(new THREE.SphereGeometry(4.4,32,24),new THREE.MeshBasicMaterial({color:0xffa34f,transparent:true,opacity:.12,side:THREE.BackSide}));scene.add(corona);
+const starfieldGeo=new THREE.BufferGeometry();const starPositions=new Float32Array(6500*3);for(let i=0;i<6500;i++){const r=THREE.MathUtils.randFloat(900,65000),a=Math.random()*Math.PI*2,b=Math.acos(THREE.MathUtils.randFloatSpread(2));starPositions[i*3]=r*Math.sin(b)*Math.cos(a);starPositions[i*3+1]=r*Math.cos(b);starPositions[i*3+2]=r*Math.sin(b)*Math.sin(a);}starfieldGeo.setAttribute('position',new THREE.BufferAttribute(starPositions,3));scene.add(new THREE.Points(starfieldGeo,new THREE.PointsMaterial({color:0xb9d9ff,size:5,sizeAttenuation:true,transparent:true,opacity:.85})));
+const planetGroup=new THREE.Group();scene.add(planetGroup);const planets=[];
+const planetSpecs=[
+ {name:'Vesper',r:1.15,d:12,color:0x8d9ca8,atmo:0x9fc5db},
+ {name:'Cinder',r:1.8,d:19,color:0xb87555,atmo:0xd68c62},
+ {name:'Nereid',r:2.6,d:29,color:0x276b9c,atmo:0x53b9e8},
+ {name:'Aurelia',r:2.2,d:41,color:0x9a805b,atmo:0xd4bd8d},
+ {name:'Kharon',r:4.3,d:58,color:0x9b8e80,atmo:0xc2b8aa},
+ {name:'Pelagos',r:3.1,d:79,color:0x356d77,atmo:0x65c9cb},
+ {name:'Thule',r:2.7,d:101,color:0x879bb5,atmo:0xb8d8f2}
+];
+function makePlanet(spec,i){
+ const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:spec.color,roughness:.88,metalness:.03});
+ const mesh=new THREE.Mesh(new THREE.SphereGeometry(spec.r, i<3?32:40, i<3?24:32),mat);g.add(mesh);
+ const atmo=new THREE.Mesh(new THREE.SphereGeometry(spec.r*1.075,24,18),new THREE.MeshBasicMaterial({color:spec.atmo,transparent:true,opacity:.12,side:THREE.BackSide}));g.add(atmo);
+ if(i===4){const ring=new THREE.Mesh(new THREE.RingGeometry(spec.r*1.35,spec.r*2.05,64),new THREE.MeshBasicMaterial({color:0xb9a78e,side:THREE.DoubleSide,transparent:true,opacity:.5}));ring.rotation.x=Math.PI/2.35;g.add(ring);}
+ const orbit=new THREE.Mesh(new THREE.RingGeometry(spec.d-.035,spec.d+.035,128),new THREE.MeshBasicMaterial({color:0x7c9ab5,side:THREE.DoubleSide,transparent:true,opacity:.11}));orbit.rotation.x=Math.PI/2;planetGroup.add(orbit);
+ g.userData={...spec,phase:i*1.2,rate:.018/(i*.45+1)};planetGroup.add(g);planets.push(g);
+}
+planetSpecs.forEach(makePlanet);
+const ship=new THREE.Group();scene.add(ship);
+const hull=new THREE.Mesh(new THREE.ConeGeometry(.8,3.8,6),new THREE.MeshStandardMaterial({color:0xc4d5e4,metalness:.72,roughness:.3}));hull.rotation.x=-Math.PI/2;ship.add(hull);
+const cockpit=new THREE.Mesh(new THREE.SphereGeometry(.42,16,12),new THREE.MeshStandardMaterial({color:0x55c9e8,metalness:.55,roughness:.16,emissive:0x123d55}));cockpit.position.set(0,.28,-.25);ship.add(cockpit);
+const wingMat=new THREE.MeshStandardMaterial({color:0x526c86,metalness:.65,roughness:.38});
+for(const s of [-1,1]){const wing=new THREE.Mesh(new THREE.BoxGeometry(2.3,.12,.75),wingMat);wing.position.set(s*.9,-.08,.45);wing.rotation.y=s*-.12;ship.add(wing);const engine=new THREE.PointLight(0x43bfff,2,9);engine.position.set(s*.42,0,1.8);ship.add(engine);}
+ship.position.set(save.position?.x||0,save.position?.y||0,save.position?.z||34);
+const systems=generateSystems(SYSTEM_COUNT);
+function generateSystems(n){let seed=194702;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};const namesA=['Aster','Nexa','Valk','Orion','Cygn','Ely','Kest','Rhea','Tara','Vesper','Drax','Mira','Sol','Novi','Thal','Zer'];const namesB=['ion','ara','eus','ora','eth','aris','on',' Prime',' Reach',' Minor','is','um','os','ea'];return Array.from({length:n},(_,i)=>{const arm=(rand()*Math.PI*2),rad=25+Math.sqrt(rand())*480;return{id:i,name:i===0?'Asterion Reach':namesA[Math.floor(rand()*namesA.length)]+namesB[Math.floor(rand()*namesB.length)],x:Math.cos(arm)*rad,y:(rand()-.5)*85,z:Math.sin(arm)*rad,stars:1+Math.floor(rand()*3),planets:2+Math.floor(rand()*9),type:['G-type','K-type','M-type','F-type','Binary'][Math.floor(rand()*5)],seed:Math.floor(rand()*1e9)};});}
+function updateSystem(){const s=systems[activeSystem];$('systemName').textContent=s.name;$('systemClass').textContent=s.type+' star · '+(activeSystem===0?'Frontier system':'Uncharted system');$('coords').textContent=String(Math.round(s.x+500)).padStart(3,'0')+' : '+String(Math.round(s.y+100)).padStart(3,'0')+' : '+String(Math.round(s.z+500)).padStart(3,'0');$('charted').textContent=save.charted.length+' / '+SYSTEM_COUNT;$('data').textContent=save.data+' units';}
+function toast(t){$('toast').textContent=t;$('toast').style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.opacity=0,2100);}
+function saveGame(){save.system=activeSystem;save.position={x:ship.position.x,y:ship.position.y,z:ship.position.z};save.lastSaved=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(save));$('saveStatus').textContent='● WORLD SAVED';toast('UNIVERSE STATE SAVED LOCALLY');}
+function scan(){scanPulse=1;const s=systems[activeSystem];if(!save.charted.includes(activeSystem)){save.charted.push(activeSystem);save.data+=80;save.discoveries.push({system:activeSystem,name:s.name,time:Date.now()});$('directive').textContent='System charted. Continue outward to discover another star system.';toast('NEW SYSTEM DISCOVERED · +80 DATA');}else{save.data+=5;toast('LOCAL SURVEY COMPLETE · +5 DATA');}saveGame();$('progress').style.width='100%';}
+function travelTo(id){activeSystem=id;const s=systems[id];ship.position.set(0,0,34);yaw=0;pitch=0;if(!save.charted.includes(id))$('directive').textContent='Uncharted system detected. Scan the area to add it to your permanent atlas.';else $('directive').textContent='Welcome back. Continue surveying this system.';updateSystem();$('mapOverlay').classList.remove('open');toast('ARRIVED AT '+s.name.toUpperCase());}
+function drawMap(){const c=$('galaxy'),rect=c.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);c.width=rect.width*dpr;c.height=rect.height*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height;ctx.fillStyle='#030a18';ctx.fillRect(0,0,w,h);for(let i=0;i<500;i++){const x=Math.random()*w,y=Math.random()*h;ctx.fillStyle='rgba(160,200,255,.25)';ctx.fillRect(x,y,1,1);}const scale=Math.min(w,h)/1050;systems.forEach((s,i)=>{const x=w/2+s.x*scale,y=h/2+s.z*scale;if(x<0||x>w||y<0||y>h)return;const known=save.charted.includes(i),selected=i===activeSystem;ctx.beginPath();ctx.arc(x,y,selected?4:known?2.2:1.25,0,Math.PI*2);ctx.fillStyle=selected?'#ffffff':known?'#6ceaff':'rgba(112,151,191,.62)';ctx.fill();if(selected){ctx.strokeStyle='#78eaff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.stroke();}});c.onclick=e=>{const r=c.getBoundingClientRect(),x=e.clientX-r.left-w/2,y=e.clientY-r.top-h/2;let best=null,dist=Infinity;systems.forEach(s=>{const dx=s.x*scale-x,dy=s.z*scale-y,d=dx*dx+dy*dy;if(d<dist){dist=d;best=s;}});if(best&&dist<260){const yes=confirm('Travel to '+best.name+'?');if(yes)travelTo(best.id);}};}
+$('scanBtn').onclick=scan;$('scanTouch').onclick=scan;$('saveBtn').onclick=saveGame;$('mapBtn').onclick=()=>{$('mapOverlay').classList.add('open');requestAnimationFrame(drawMap);};$('closeMap').onclick=()=>$('mapOverlay').classList.remove('open');
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='w'||k==='arrowup')input.forward=1;if(k==='s'||k==='arrowdown')input.forward=-1;if(k==='a'||k==='arrowleft')input.side=-1;if(k==='d'||k==='arrowright')input.side=1;if(k===' ')boost=true;if(k==='shift')boost=true;if(k==='e')scan();if(k==='m'){$('mapOverlay').classList.toggle('open');if($('mapOverlay').classList.contains('open'))requestAnimationFrame(drawMap);}});window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(['w','s','arrowup','arrowdown'].includes(k))input.forward=0;if(['a','d','arrowleft','arrowright'].includes(k))input.side=0;if(k===' '||k==='shift')boost=false;});
+const stick=$('stick'),nub=$('nub');let pointer=null;stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);moveStick(e);});stick.addEventListener('pointermove',e=>{if(pointer===e.pointerId)moveStick(e);});function moveStick(e){const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.hypot(dx,dy),m=Math.min(1, len/42),x=len?dx/len*m:0,y=len?dy/len*m:0;nub.style.transform=`translate(${x*36}px,${y*36}px)`;input.side=x;input.forward=-y;}function releaseStick(){pointer=null;input.side=0;input.forward=0;nub.style.transform=''}stick.addEventListener('pointerup',releaseStick);stick.addEventListener('pointercancel',releaseStick);$('boostBtn').addEventListener('pointerdown',()=>boost=true);['pointerup','pointercancel','pointerleave'].forEach(ev=>$('boostBtn').addEventListener(ev,()=>boost=false));
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<700?1.35:1.8));if($('mapOverlay').classList.contains('open'))drawMap();});
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04),t=clock.elapsedTime;planets.forEach(p=>{p.rotation.y+=dt*.12;const d=p.userData.d,a=t*p.userData.rate+p.userData.phase;p.position.set(Math.cos(a)*d,Math.sin(a*.7)*d*.025,Math.sin(a)*d);});starCore.rotation.y+=dt*.035;corona.rotation.y-=dt*.02;
+const accel=boost?48:22,max=boost?115:48;speed=THREE.MathUtils.damp(speed,input.forward*max,3.5,dt);const side=input.side*max*.72;ship.translateZ(-speed*dt);ship.translateX(side*dt);ship.rotation.z=THREE.MathUtils.damp(ship.rotation.z,-input.side*.28,4,dt);ship.rotation.x=THREE.MathUtils.damp(ship.rotation.x,input.forward*.07,3,dt);if(boost&&Math.abs(speed)>15)ship.position.z-=accel*dt*.12;
+camera.position.lerp(new THREE.Vector3(ship.position.x,ship.position.y+7,ship.position.z+17),1-Math.pow(.001,dt));camera.lookAt(ship.position.x,ship.position.y,ship.position.z-12);
+$('speed').textContent=Math.round(Math.abs(speed)*3.6)+' km/s';if(scanPulse>0){scanPulse=Math.max(0,scanPulse-dt);$('progress').style.width=(100-scanPulse*100)+'%';}
+renderer.render(scene,camera);}
+updateSystem();animate();setTimeout(()=>toast('FLIGHT SYSTEMS ONLINE · WELCOME, EXPLORER'),800);
+window.addEventListener('beforeunload',()=>{save.system=activeSystem;save.position={x:ship.position.x,y:ship.position.y,z:ship.position.z};try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}});
+</script>
+</body>
+</html>
