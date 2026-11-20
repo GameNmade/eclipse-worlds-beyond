@@ -8845,3 +8845,4 @@ window.addEventListener('unhandledrejection', function(event) {
 </script>
 </body>
 </html>
+(function(){const prior=updatePlayer;let recovery=0;updatePlayer=function(dt){prior(dt);if(!player)return;const rig=player.children.find(c=>c.userData&&c.userData.arms&&c.userData.legs);if(!rig)return;if(dodgeTime>0){const p=1-dodgeTime/.32;rig.rotation.z+=Math.sin(Math.min(1,p)*Math.PI)*.72;rig.rotation.x-=Math.sin(Math.min(1,p)*Math.PI)*.28;recovery=.18}else if(recovery>0){recovery=Math.max(0,recovery-dt);rig.rotation.x-=recovery*.22;for(const a of rig.userData.arms){a.upper.rotation.x-=recovery*.35}}};console.log('ECLIPSE PHASE 3 DODGE ROLL LOADED')})();
