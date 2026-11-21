@@ -96,10 +96,31 @@ function makePlanet(spec,i){
 }
 planetSpecs.forEach(makePlanet);
 const ship=new THREE.Group();scene.add(ship);
-const hull=new THREE.Mesh(new THREE.ConeGeometry(.9,4.4,10),new THREE.MeshStandardMaterial({color:0x9f1828,metalness:.82,roughness:.24}));hull.rotation.x=-Math.PI/2;ship.add(hull);
-const cockpit=new THREE.Mesh(new THREE.SphereGeometry(.48,24,16),new THREE.MeshPhysicalMaterial({color:0x43c9ef,metalness:.5,roughness:.12,emissive:0x123d55,clearcoat:1,clearcoatRoughness:.08}));cockpit.position.set(0,.3,-.48);cockpit.scale.set(.82,.72,1.5);ship.add(cockpit);
-const wingMat=new THREE.MeshStandardMaterial({color:0x526c86,metalness:.65,roughness:.38});
-for(const s of [-1,1]){const wing=new THREE.Mesh(new THREE.BoxGeometry(2.3,.12,.75),wingMat);wing.position.set(s*.9,-.08,.45);wing.rotation.y=s*-.12;ship.add(wing);const engine=new THREE.PointLight(0x43bfff,2,9);engine.position.set(s*.42,0,1.8);ship.add(engine);}
+const hullMat=new THREE.MeshStandardMaterial({color:0x851827,metalness:.72,roughness:.32});
+const hullProfile=[new THREE.Vector2(.52,-2.25),new THREE.Vector2(.66,-1.8),new THREE.Vector2(.76,-.9),new THREE.Vector2(.7,.35),new THREE.Vector2(.52,1.35),new THREE.Vector2(.32,1.95),new THREE.Vector2(.04,2.35)];
+const hull=new THREE.Mesh(new THREE.LatheGeometry(hullProfile,48),hullMat);hull.rotation.x=-Math.PI/2;ship.add(hull);
+const armorMat=new THREE.MeshStandardMaterial({color:0xb52b39,metalness:.72,roughness:.34});
+const darkMat=new THREE.MeshStandardMaterial({color:0x172b40,metalness:.88,roughness:.28});
+const trimMat=new THREE.MeshStandardMaterial({color:0x8297a9,metalness:.9,roughness:.22});
+const canopyMat=new THREE.MeshPhysicalMaterial({color:0x48c9ed,metalness:.38,roughness:.09,clearcoat:1,clearcoatRoughness:.04,emissive:0x092d42});
+const canopy=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),canopyMat);canopy.position.set(0,.34,-.58);canopy.scale.set(.46,.29,.88);ship.add(canopy);
+const wingShape=new THREE.Shape();wingShape.moveTo(0,.55);wingShape.lineTo(2.8,-1.15);wingShape.lineTo(2.65,-.55);wingShape.lineTo(1.05,.72);wingShape.lineTo(.3,.95);wingShape.closePath();
+const wingGeo=new THREE.ExtrudeGeometry(wingShape,{depth:.16,bevelEnabled:true,bevelSegments:4,steps:1,bevelSize:.075,bevelThickness:.065});
+for(const s of [-1,1]){
+const wing=new THREE.Mesh(wingGeo,armorMat);wing.scale.x=s;wing.rotation.x=-Math.PI/2;wing.position.set(s*.42,-.12,.15);ship.add(wing);
+const stripe=new THREE.Mesh(new THREE.BoxGeometry(1.65,.025,.055),trimMat);stripe.position.set(s*1.55,-.025,.15);stripe.rotation.y=s*-.48;ship.add(stripe);
+const nacelleProfile=[new THREE.Vector2(.17,-.78),new THREE.Vector2(.25,-.58),new THREE.Vector2(.29,-.25),new THREE.Vector2(.28,.42),new THREE.Vector2(.22,.7),new THREE.Vector2(.16,.82)];
+const nacelle=new THREE.Mesh(new THREE.LatheGeometry(nacelleProfile,24),darkMat);nacelle.rotation.x=-Math.PI/2;nacelle.position.set(s*1.18,-.04,1.02);ship.add(nacelle);
+const nozzle=new THREE.Mesh(new THREE.TorusGeometry(.2,.045,10,28),trimMat);nozzle.position.set(s*1.18,-.04,1.84);ship.add(nozzle);
+const inner=new THREE.Mesh(new THREE.CircleGeometry(.16,24),new THREE.MeshBasicMaterial({color:0x42caff}));inner.position.set(s*1.18,-.04,1.846);ship.add(inner);
+const exhaust=new THREE.Mesh(new THREE.ConeGeometry(.13,.65,20),new THREE.MeshBasicMaterial({color:0x39bfff,transparent:true,opacity:.62}));exhaust.rotation.x=Math.PI/2;exhaust.position.set(s*1.18,-.04,2.22);ship.add(exhaust);
+const engineLight=new THREE.PointLight(0x43bfff,2.5,10);engineLight.position.set(s*1.18,0,1.95);ship.add(engineLight);
+const finShape=new THREE.Shape();finShape.moveTo(0,0);finShape.lineTo(.62,.12);finShape.lineTo(.48,.82);finShape.lineTo(.08,.62);finShape.closePath();
+const fin=new THREE.Mesh(new THREE.ExtrudeGeometry(finShape,{depth:.09,bevelEnabled:true,bevelSegments:2,bevelSize:.025,bevelThickness:.025}),darkMat);fin.position.set(s*.58,.28,.65);fin.rotation.y=s*-.12;ship.add(fin);
+}
+for(let i=0;i<7;i++){const panel=new THREE.Mesh(new THREE.BoxGeometry(.035,.018,.34),trimMat);panel.position.set(i%2?-.68:.68,-.045,-1.25+i*.38);ship.add(panel);}
+const dorsal=new THREE.Mesh(new THREE.BoxGeometry(.24,.12,1.1),darkMat);dorsal.position.set(0,.48,.65);ship.add(dorsal);
+const sensor=new THREE.Mesh(new THREE.SphereGeometry(.09,12,10),new THREE.MeshBasicMaterial({color:0xff453f}));sensor.position.set(0,.55,1.22);ship.add(sensor);
 ship.position.set(save.position?.x||0,save.position?.y||0,save.position?.z||34);
 const systems=generateSystems(SYSTEM_COUNT);
 function generateSystems(n){let seed=194702;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};const namesA=['Aster','Nexa','Valk','Orion','Cygn','Ely','Kest','Rhea','Tara','Vesper','Drax','Mira','Sol','Novi','Thal','Zer'];const namesB=['ion','ara','eus','ora','eth','aris','on',' Prime',' Reach',' Minor','is','um','os','ea'];return Array.from({length:n},(_,i)=>{const arm=(rand()*Math.PI*2),rad=25+Math.sqrt(rand())*480;return{id:i,name:i===0?'Asterion Reach':namesA[Math.floor(rand()*namesA.length)]+namesB[Math.floor(rand()*namesB.length)],x:Math.cos(arm)*rad,y:(rand()-.5)*85,z:Math.sin(arm)*rad,stars:1+Math.floor(rand()*3),planets:2+Math.floor(rand()*9),type:['G-type','K-type','M-type','F-type','Binary'][Math.floor(rand()*5)],seed:Math.floor(rand()*1e9)};});}
