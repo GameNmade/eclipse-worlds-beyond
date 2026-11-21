@@ -96,7 +96,7 @@ function makePlanet(spec,i){
 }
 planetSpecs.forEach(makePlanet);
 const ship=new THREE.Group();scene.add(ship);
-const hull=new THREE.Mesh(new THREE.ConeGeometry(.8,3.8,6),new THREE.MeshStandardMaterial({color:0xc4d5e4,metalness:.72,roughness:.3}));hull.rotation.x=-Math.PI/2;ship.add(hull);
+const hull=new THREE.Mesh(new THREE.ConeGeometry(.9,4.4,10),new THREE.MeshStandardMaterial({color:0x9f1828,metalness:.82,roughness:.24}));hull.rotation.x=-Math.PI/2;ship.add(hull);
 const cockpit=new THREE.Mesh(new THREE.SphereGeometry(.42,16,12),new THREE.MeshStandardMaterial({color:0x55c9e8,metalness:.55,roughness:.16,emissive:0x123d55}));cockpit.position.set(0,.28,-.25);ship.add(cockpit);
 const wingMat=new THREE.MeshStandardMaterial({color:0x526c86,metalness:.65,roughness:.38});
 for(const s of [-1,1]){const wing=new THREE.Mesh(new THREE.BoxGeometry(2.3,.12,.75),wingMat);wing.position.set(s*.9,-.08,.45);wing.rotation.y=s*-.12;ship.add(wing);const engine=new THREE.PointLight(0x43bfff,2,9);engine.position.set(s*.42,0,1.8);ship.add(engine);}
